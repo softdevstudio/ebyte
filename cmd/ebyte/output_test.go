@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/softdevstudio/ebyte"
@@ -171,4 +172,101 @@ func TestPublicationPinsRenamedParent(t *testing.T) {
 		}
 	}
 	assertNoTemporary(t, moved)
+}
+
+func TestInjectedPublicationFailures(t *testing.T) {
+	supportedPublication(t)
+	for _, stage := range []string{"create", "sync", "close", "link", "cleanup-before-link", "cleanup-after-link", "cancel-after-sync"} {
+		t.Run(stage, func(t *testing.T) {
+			dir := t.TempDir()
+			path := filepath.Join(dir, "result")
+			ops := nativePublicationOps()
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			fault := errors.New("SECRET injected filesystem failure")
+			linked := false
+			var temporary string
+			originalCreate, originalClose, originalLink := ops.create, ops.close, ops.link
+			ops.create = func(root *os.Root, name string) (*os.File, error) {
+				temporary = name
+				if stage == "create" {
+					return nil, fault
+				}
+				return originalCreate(root, name)
+			}
+			if stage == "sync" {
+				ops.sync = func(*os.File) error { return fault }
+			}
+			if stage == "close" {
+				calls := 0
+				ops.close = func(file *os.File) error {
+					calls++
+					if calls == 1 {
+						return fault
+					}
+					return originalClose(file)
+				}
+			}
+			ops.link = func(root *os.Root, old, new string) error {
+				if stage == "link" {
+					return fault
+				}
+				e := originalLink(root, old, new)
+				linked = e == nil
+				return e
+			}
+			if stage == "cleanup-before-link" || stage == "cleanup-after-link" {
+				ops.remove = func(*os.Root, string) error { return fault }
+			}
+			if stage == "cancel-after-sync" {
+				original := ops.sync
+				ops.sync = func(file *os.File) error { err := original(file); cancel(); return err }
+			}
+			err := publishOutputWith(ctx, path, func(w io.Writer) error {
+				_, err := w.Write([]byte("complete"))
+				if stage == "cleanup-before-link" {
+					return fault
+				}
+				return err
+			}, ops)
+			d, ok := err.(*ebyte.Diagnostic)
+			if !ok || strings.Contains(d.Error(), "SECRET") {
+				t.Fatalf("got %#v", err)
+			}
+			want := "write_failed"
+			if stage == "cancel-after-sync" {
+				want = "cancelled"
+			}
+			if d.Code != want {
+				t.Fatalf("got %#v", d)
+			}
+			_, statErr := os.Lstat(path)
+			if stage == "cleanup-after-link" {
+				if !linked || statErr != nil {
+					t.Fatal("committed destination lost")
+				}
+				b, _ := os.ReadFile(path)
+				if string(b) != "complete" {
+					t.Fatal("partial publication")
+				}
+				if !strings.Contains(d.Observed, "destination") {
+					t.Fatal("lost publication warning")
+				}
+			} else if linked || !errors.Is(statErr, os.ErrNotExist) {
+				t.Fatal("failed operation published output")
+			}
+			if stage == "cleanup-before-link" || stage == "cleanup-after-link" {
+				if !strings.Contains(d.Observed, "temporary file") {
+					t.Fatal("lost cleanup warning")
+				}
+				if _, err := os.Lstat(filepath.Join(dir, temporary)); err != nil {
+					t.Fatal("fault not exercised")
+				}
+				if err := os.Remove(filepath.Join(dir, temporary)); err != nil {
+					t.Fatal(err)
+				}
+			}
+			assertNoTemporary(t, dir)
+		})
+	}
 }

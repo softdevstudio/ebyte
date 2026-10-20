@@ -1,16 +1,16 @@
-UTC: 2026-10-20T10:44:17Z
+UTC: 2026-10-20T11:00:24Z
 go version go1.27.3 linux/amd64
 linux
 amd64
 1
-Source SHA256: cf99e1f435951c20b6a8b16df9263d3b63b1302da849b6bca9b542943a008913
+Source SHA256: a416604197c2bb0fd45e7b1f65cfb95e5edd703ab8bd2e80c437fe59f303b8e7
 test_does_not_follow_links_inside_latest (test_results.LatestResultsTests.test_does_not_follow_links_inside_latest) ... ok
 test_rejects_files_without_removal (test_results.LatestResultsTests.test_rejects_files_without_removal) ... ok
 test_rejects_symlink_at_every_managed_component (test_results.LatestResultsTests.test_rejects_symlink_at_every_managed_component) ... ok
 test_replaces_latest_and_preserves_release_evidence (test_results.LatestResultsTests.test_replaces_latest_and_preserves_release_evidence) ... ok
 
 ----------------------------------------------------------------------
-Ran 4 tests in 0.003s
+Ran 4 tests in 0.004s
 
 OK
 === RUN   TestDecodeIndependentGoldens
@@ -18,7 +18,7 @@ OK
 === RUN   TestDecodeIndependentGoldens/wide
 === RUN   TestDecodeIndependentGoldens/empty
 === RUN   TestDecodeIndependentGoldens/stored
---- PASS: TestDecodeIndependentGoldens (0.00s)
+--- PASS: TestDecodeIndependentGoldens (0.01s)
     --- PASS: TestDecodeIndependentGoldens/packet (0.00s)
     --- PASS: TestDecodeIndependentGoldens/wide (0.00s)
     --- PASS: TestDecodeIndependentGoldens/empty (0.00s)
@@ -55,7 +55,7 @@ OK
 === RUN   TestIndependentDecodeBudgets/input
 === RUN   TestIndependentDecodeBudgets/document
 === RUN   TestIndependentDecodeBudgets/trace
---- PASS: TestIndependentDecodeBudgets (0.00s)
+--- PASS: TestIndependentDecodeBudgets (0.01s)
     --- PASS: TestIndependentDecodeBudgets/nodes (0.00s)
     --- PASS: TestIndependentDecodeBudgets/entries (0.00s)
     --- PASS: TestIndependentDecodeBudgets/input (0.00s)
@@ -115,7 +115,7 @@ OK
 === RUN   TestEncodeRejectsEditsBeforeWriting/invalid_UTF8
 === RUN   TestEncodeRejectsEditsBeforeWriting/bad_element
 === RUN   TestEncodeRejectsEditsBeforeWriting/array_null
---- PASS: TestEncodeRejectsEditsBeforeWriting (0.02s)
+--- PASS: TestEncodeRejectsEditsBeforeWriting (0.01s)
     --- PASS: TestEncodeRejectsEditsBeforeWriting/derived_present (0.00s)
     --- PASS: TestEncodeRejectsEditsBeforeWriting/inactive_present (0.00s)
     --- PASS: TestEncodeRejectsEditsBeforeWriting/missing_active (0.00s)
@@ -169,6 +169,14 @@ OK
 --- PASS: TestWideAndEmptyManualOracle (0.00s)
 === RUN   TestAcceptanceVectorManualBoundaries
 --- PASS: TestAcceptanceVectorManualBoundaries (0.00s)
+=== RUN   TestAllASCIIEscapeAccounting
+--- PASS: TestAllASCIIEscapeAccounting (0.00s)
+=== RUN   TestRepeatedDerivedCountBudgetIndependence
+--- PASS: TestRepeatedDerivedCountBudgetIndependence (0.00s)
+=== RUN   TestHugeDimensionsDoNotReadPayload
+--- PASS: TestHugeDimensionsDoNotReadPayload (0.00s)
+=== RUN   TestUTF8BoundaryFailures
+--- PASS: TestUTF8BoundaryFailures (0.00s)
 === RUN   TestCompileGolden
 === RUN   TestCompileGolden/packet
 === RUN   TestCompileGolden/wide
@@ -233,6 +241,20 @@ OK
 === RUN   FuzzLosslessPacket/seed#0
 --- PASS: FuzzLosslessPacket (0.00s)
     --- PASS: FuzzLosslessPacket/seed#0 (0.00s)
+=== RUN   FuzzLosslessShapes
+=== RUN   FuzzLosslessShapes/seed#0
+=== RUN   FuzzLosslessShapes/seed#1
+=== RUN   FuzzLosslessShapes/seed#2
+=== RUN   FuzzLosslessShapes/seed#3
+=== RUN   FuzzLosslessShapes/seed#4
+=== RUN   FuzzLosslessShapes/seed#5
+--- PASS: FuzzLosslessShapes (0.00s)
+    --- PASS: FuzzLosslessShapes/seed#0 (0.00s)
+    --- PASS: FuzzLosslessShapes/seed#1 (0.00s)
+    --- PASS: FuzzLosslessShapes/seed#2 (0.00s)
+    --- PASS: FuzzLosslessShapes/seed#3 (0.00s)
+    --- PASS: FuzzLosslessShapes/seed#4 (0.00s)
+    --- PASS: FuzzLosslessShapes/seed#5 (0.00s)
 === RUN   FuzzCompile
 === RUN   FuzzCompile/seed#0
 === RUN   FuzzCompile/seed#1
@@ -240,7 +262,7 @@ OK
     --- PASS: FuzzCompile/seed#0 (0.00s)
     --- PASS: FuzzCompile/seed#1 (0.00s)
 PASS
-ok  	github.com/softdevstudio/ebyte	1.102s
+ok  	github.com/softdevstudio/ebyte	1.109s
 === RUN   TestOperationalCommands
 === RUN   TestOperationalCommands/packet
 === RUN   TestOperationalCommands/wide
@@ -265,6 +287,8 @@ ok  	github.com/softdevstudio/ebyte	1.102s
 --- PASS: TestTextTraceLimitAndHelpShortWrite (0.00s)
 === RUN   TestCancellationRetainsOutputWarning
 --- PASS: TestCancellationRetainsOutputWarning (0.00s)
+=== RUN   TestCancellationPreservesPublicationAndLocationDetails
+--- PASS: TestCancellationPreservesPublicationAndLocationDetails (0.00s)
 === RUN   TestAvailableCommands
 --- PASS: TestAvailableCommands (0.00s)
 === RUN   TestInvalidArgumentsFailWithoutEcho
@@ -291,30 +315,76 @@ ok  	github.com/softdevstudio/ebyte	1.102s
 --- PASS: TestDestinationCreatedDuringStaging (0.00s)
 === RUN   TestPublicationPinsRenamedParent
 --- PASS: TestPublicationPinsRenamedParent (0.00s)
+=== RUN   TestInjectedPublicationFailures
+=== RUN   TestInjectedPublicationFailures/create
+=== RUN   TestInjectedPublicationFailures/sync
+=== RUN   TestInjectedPublicationFailures/close
+=== RUN   TestInjectedPublicationFailures/link
+=== RUN   TestInjectedPublicationFailures/cleanup-before-link
+=== RUN   TestInjectedPublicationFailures/cleanup-after-link
+=== RUN   TestInjectedPublicationFailures/cancel-after-sync
+--- PASS: TestInjectedPublicationFailures (0.01s)
+    --- PASS: TestInjectedPublicationFailures/create (0.00s)
+    --- PASS: TestInjectedPublicationFailures/sync (0.00s)
+    --- PASS: TestInjectedPublicationFailures/close (0.00s)
+    --- PASS: TestInjectedPublicationFailures/link (0.00s)
+    --- PASS: TestInjectedPublicationFailures/cleanup-before-link (0.00s)
+    --- PASS: TestInjectedPublicationFailures/cleanup-after-link (0.00s)
+    --- PASS: TestInjectedPublicationFailures/cancel-after-sync (0.00s)
+=== RUN   FuzzCLIArguments
+=== RUN   FuzzCLIArguments/seed#0
+=== RUN   FuzzCLIArguments/seed#1
+=== RUN   FuzzCLIArguments/seed#2
+--- PASS: FuzzCLIArguments (0.00s)
+    --- PASS: FuzzCLIArguments/seed#0 (0.00s)
+    --- PASS: FuzzCLIArguments/seed#1 (0.00s)
+    --- PASS: FuzzCLIArguments/seed#2 (0.00s)
 PASS
-ok  	github.com/softdevstudio/ebyte/cmd/ebyte	1.048s
-fuzz: elapsed: 0s, gathering baseline coverage: 0/58 completed
-fuzz: elapsed: 0s, gathering baseline coverage: 58/58 completed, now fuzzing with 2 workers
-fuzz: elapsed: 3s, execs: 15779 (5259/sec), new interesting: 3 (total: 61)
-fuzz: elapsed: 6s, execs: 39593 (7937/sec), new interesting: 4 (total: 62)
-fuzz: elapsed: 6s, execs: 39593 (0/sec), new interesting: 4 (total: 62)
+ok  	github.com/softdevstudio/ebyte/cmd/ebyte	1.056s
+?   	github.com/softdevstudio/ebyte/internal/resourcecheck	[no test files]
+fuzz: elapsed: 0s, gathering baseline coverage: 0/62 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 62/62 completed, now fuzzing with 2 workers
+fuzz: elapsed: 3s, execs: 4363 (1454/sec), new interesting: 1 (total: 63)
+fuzz: elapsed: 6s, execs: 4363 (0/sec), new interesting: 1 (total: 63)
+fuzz: elapsed: 6s, execs: 4363 (0/sec), new interesting: 1 (total: 63)
 PASS
-ok  	github.com/softdevstudio/ebyte	6.019s
-fuzz: elapsed: 0s, gathering baseline coverage: 0/120 completed
-fuzz: elapsed: 0s, gathering baseline coverage: 120/120 completed, now fuzzing with 2 workers
-fuzz: elapsed: 3s, execs: 33500 (11166/sec), new interesting: 12 (total: 132)
-fuzz: elapsed: 6s, execs: 33500 (0/sec), new interesting: 12 (total: 132)
-fuzz: elapsed: 6s, execs: 33500 (0/sec), new interesting: 12 (total: 132)
+ok  	github.com/softdevstudio/ebyte	6.025s
+fuzz: elapsed: 0s, gathering baseline coverage: 0/132 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 132/132 completed, now fuzzing with 2 workers
+fuzz: elapsed: 3s, execs: 32503 (10831/sec), new interesting: 4 (total: 136)
+fuzz: elapsed: 6s, execs: 32503 (0/sec), new interesting: 4 (total: 136)
+fuzz: elapsed: 6s, execs: 32503 (0/sec), new interesting: 4 (total: 136)
 PASS
-ok  	github.com/softdevstudio/ebyte	6.012s
-fuzz: elapsed: 0s, gathering baseline coverage: 0/40 completed
-fuzz: elapsed: 0s, gathering baseline coverage: 40/40 completed, now fuzzing with 2 workers
-fuzz: elapsed: 3s, execs: 16483 (5492/sec), new interesting: 8 (total: 48)
-fuzz: elapsed: 6s, execs: 16483 (0/sec), new interesting: 8 (total: 48)
-fuzz: elapsed: 6s, execs: 16483 (0/sec), new interesting: 8 (total: 48)
+ok  	github.com/softdevstudio/ebyte	6.018s
+fuzz: elapsed: 0s, gathering baseline coverage: 0/48 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 48/48 completed, now fuzzing with 2 workers
+fuzz: elapsed: 3s, execs: 16160 (5383/sec), new interesting: 2 (total: 50)
+fuzz: elapsed: 6s, execs: 16160 (0/sec), new interesting: 2 (total: 50)
+fuzz: elapsed: 6s, execs: 16160 (0/sec), new interesting: 2 (total: 50)
 PASS
-ok  	github.com/softdevstudio/ebyte	6.016s
+ok  	github.com/softdevstudio/ebyte	6.011s
+fuzz: elapsed: 0s, gathering baseline coverage: 0/103 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 103/103 completed, now fuzzing with 2 workers
+fuzz: elapsed: 3s, execs: 29664 (9886/sec), new interesting: 20 (total: 123)
+fuzz: elapsed: 6s, execs: 29664 (0/sec), new interesting: 20 (total: 123)
+fuzz: elapsed: 6s, execs: 29664 (0/sec), new interesting: 20 (total: 123)
+PASS
+ok  	github.com/softdevstudio/ebyte	6.013s
+fuzz: elapsed: 0s, gathering baseline coverage: 0/95 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 95/95 completed, now fuzzing with 2 workers
+fuzz: elapsed: 3s, execs: 16776 (5590/sec), new interesting: 15 (total: 110)
+fuzz: elapsed: 6s, execs: 16776 (0/sec), new interesting: 15 (total: 110)
+fuzz: elapsed: 6s, execs: 16776 (0/sec), new interesting: 15 (total: 110)
+PASS
+ok  	github.com/softdevstudio/ebyte	6.021s
+fuzz: elapsed: 0s, gathering baseline coverage: 0/14 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 14/14 completed, now fuzzing with 2 workers
+fuzz: elapsed: 3s, execs: 103390 (34458/sec), new interesting: 2 (total: 16)
+fuzz: elapsed: 5s, execs: 182585 (39190/sec), new interesting: 2 (total: 16)
+PASS
+ok  	github.com/softdevstudio/ebyte/cmd/ebyte	5.026s
 PASS: compiled CLI stdin round trip, failed traces, limit exits, collision protection and argument privacy
 PASS: broken stdout pipes exit 1 with diagnostics; SIGINT exits 3 while stdin remains open
 PASS: built-CLI demo, 21-byte exact round trip; added record gives 25 bytes, count 3, note offset 23
-PASS: formatting, vet, race, independent fixture/decoder oracles, bounded decoder/document/lossless fuzz, build and operational CLI smoke and saved round-trip demo
+PASS: 10 isolated resource cases, exact 16 MiB payload round trip, escape expansion and bounded rejection
+PASS: formatting, vet, race, independent fixture/decoder oracles, six bounded fuzz targets, build and operational CLI smoke and saved round-trip demo and resource observations

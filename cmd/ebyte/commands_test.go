@@ -12,6 +12,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/softdevstudio/ebyte"
 )
@@ -343,5 +344,62 @@ func TestCancellationRetainsOutputWarning(t *testing.T) {
 		if !strings.Contains(d.Observed, "output may") {
 			t.Fatalf("lost output warning: %#v", d)
 		}
+	}
+}
+
+func FuzzCLIArguments(f *testing.F) {
+	f.Add("decode\x00--schema\x00missing\x00--input=-")
+	f.Add("inspect\x00--max-depth=9")
+	f.Add("validate-schema\x00--schema=x\x00--schema=y")
+	f.Fuzz(func(t *testing.T, raw string) {
+		if len(raw) > 8192 {
+			return
+		}
+		args := strings.Split(raw, "\x00")
+		opt, e := parseOptions(args)
+		if e != nil {
+			return
+		}
+		if !validCommand(opt.command) || opt.schema == "" || opt.schema == "-" || opt.output == "" {
+			t.Fatal("invalid accepted options")
+		}
+		if opt.command != "validate-schema" && opt.input == "" {
+			t.Fatal("missing input accepted")
+		}
+		if opt.format != "json" && opt.format != "text" {
+			t.Fatal("invalid format accepted")
+		}
+		if opt.limits.MaxSchemaBytes < 0 || opt.limits.MaxSchemaBytes > ebyte.DefaultLimits().MaxSchemaBytes {
+			t.Fatal("invalid ceiling")
+		}
+	})
+}
+
+func TestCancellationPreservesPublicationAndLocationDetails(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	for _, observed := range []string{"staging cleanup failed; destination and temporary file may exist", strings.Repeat("x", 96)} {
+		var stderr bytes.Buffer
+		d := commandFailure("write_failed", observed).(*ebyte.Diagnostic)
+		offset := int64(2)
+		d.Offset = &offset
+		if code := reportContext(ctx, &stderr, d); code != 3 {
+			t.Fatal("cancelled publication exit")
+		}
+		reported := errorDiagnostic(t, stderr.Bytes(), "cancelled")
+		if !strings.Contains(reported.Observed, observed) || utf8.RuneCountInString(reported.Observed) > 96 || reported.Offset == nil || *reported.Offset != 2 {
+			t.Fatal("publication warning lost")
+		}
+	}
+	var stderr bytes.Buffer
+	d := commandFailure("read_failed", "input read failed").(*ebyte.Diagnostic)
+	at, start := int64(2), int64(0)
+	d.Path = "/body"
+	d.Offset = &at
+	d.FieldStart = &start
+	reportContext(ctx, &stderr, d)
+	reported := errorDiagnostic(t, stderr.Bytes(), "cancelled")
+	if reported.Path != "/body" || reported.Offset == nil || *reported.Offset != 2 || reported.FieldStart == nil || *reported.FieldStart != 0 {
+		t.Fatal("cancellation lost known input position")
 	}
 }

@@ -32,7 +32,31 @@ func publicationCancelled(ctx context.Context) error {
 // filesystems fail closed. It does not promise directory/power-loss durability.
 // The opened parent directory must be trusted against concurrent modification of
 // its entries. Directory renames are pinned by os.Root rather than followed.
+type publicationOps struct {
+	create func(*os.Root, string) (*os.File, error)
+	sync   func(*os.File) error
+	close  func(*os.File) error
+	link   func(*os.Root, string, string) error
+	remove func(*os.Root, string) error
+}
+
+func nativePublicationOps() publicationOps {
+	return publicationOps{
+		create: func(root *os.Root, name string) (*os.File, error) {
+			return root.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
+		},
+		sync:   func(file *os.File) error { return file.Sync() },
+		close:  func(file *os.File) error { return file.Close() },
+		link:   func(root *os.Root, old, new string) error { return root.Link(old, new) },
+		remove: func(root *os.Root, name string) error { return root.Remove(name) },
+	}
+}
 func publishOutput(ctx context.Context, destination string, produce func(io.Writer) error) error {
+	return publishOutputWith(ctx, destination, produce, nativePublicationOps())
+}
+
+// Per-call operations allow failure tests without mutable global hooks.
+func publishOutputWith(ctx context.Context, destination string, produce func(io.Writer) error, ops publicationOps) (result error) {
 	if e := publicationCancelled(ctx); e != nil {
 		return e
 	}
@@ -54,7 +78,7 @@ func publishOutput(ctx context.Context, destination string, produce func(io.Writ
 	var temporary string
 	for attempts := 0; attempts < 64; attempts++ {
 		temporary = ".ebyte-" + rand.Text() + ".tmp"
-		file, e = root.OpenFile(temporary, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
+		file, e = ops.create(root, temporary)
 		if e == nil {
 			break
 		}
@@ -65,31 +89,43 @@ func publishOutput(ctx context.Context, destination string, produce func(io.Writ
 	if e != nil {
 		return publicationFailure("write_failed", false)
 	}
-	defer file.Close()
-	defer root.Remove(temporary)
+	closed, published := false, false
+	defer func() {
+		if !closed {
+			if e := ops.close(file); e != nil && result == nil {
+				result = publicationFailure("write_failed", published)
+			}
+		}
+		if e := ops.remove(root, temporary); e != nil && !errors.Is(e, os.ErrNotExist) {
+			observed := "staging cleanup failed; temporary file may remain"
+			if published {
+				observed = "staging cleanup failed; destination and temporary file may exist"
+			}
+			result = &ebyte.Diagnostic{DiagnosticVersion: 1, Stage: "io", Code: "write_failed", Expected: "staging file removed", Observed: observed}
+		}
+	}()
 	if e = produce(file); e != nil {
 		return e
 	}
 	if e = publicationCancelled(ctx); e != nil {
 		return e
 	}
-	if e = file.Sync(); e != nil {
+	if e = ops.sync(file); e != nil {
 		return publicationFailure("write_failed", false)
 	}
-	if e = file.Close(); e != nil {
+	if e = ops.close(file); e != nil {
 		return publicationFailure("write_failed", false)
 	}
+	closed = true
 	if e = publicationCancelled(ctx); e != nil {
 		return e
 	}
-	if e = root.Link(temporary, name); e != nil {
+	if e = ops.link(root, temporary, name); e != nil {
 		if errors.Is(e, os.ErrExist) {
 			return publicationFailure("destination_exists", false)
 		}
 		return publicationFailure("write_failed", false)
 	}
-	if e = root.Remove(temporary); e != nil {
-		return publicationFailure("write_failed", true)
-	}
+	published = true
 	return nil
 }

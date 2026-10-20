@@ -86,8 +86,14 @@ Read [schema-v1](docs/schema-v1.md), [document-v1](docs/document-v1.md) and [err
 
 The initial subset is integers, ASCII/UTF-8 strings, bytes, counted arrays and equality conditions on earlier integer siblings. An unchanged accepted input must round-trip exactly under identical schema bytes. An edit can change derived counts and move later fields. There is no support for arbitrary expressions, seeks, recursive schemas, executable plugins, graphical editing or structural diff in v1. JSON output materializes bounded data and may be much larger than binary input.
 
+## Hardening and resource evidence
+
+[Testing reference](docs/testing.md) describes the independent fixtures, adversarial boundaries, six fuzz targets and publication fault injection. The recorder also runs ten isolated resource cases and saves test/results/latest/resources.json. Cases cover raw fields through the exact 16 MiB binary ceiling, JSON escape expansion, 65536 empty array elements, the value-node ceiling, a lowered trace ceiling and rejection of a huge declared field before payload reads.
+
+Resource observations record actual document/trace sizes, bytes read, round-trip hashes, elapsed time, cumulative Go allocations and before/after heap snapshots. Fixture construction is outside the measured pipeline, but heap snapshots include live fixtures and compiled plans. Each case has one fresh-process sample. These are reproducible observations of a materialized pipeline, not peak RSS measurements, a fixed memory cap or a throughput guarantee. Large accepted files can cause several times their size in cumulative allocations. The internal resource runner is a test helper and is not a second shipped tool.
+
 ## Development and delivery
 
-CLAUDE.md is the only plan and handoff. AGENTS.md points to it. Follow the supplied chatgpt-project-standards.md. Linux/macOS CI runs formatting, vet, race tests, fixture checks, three bounded fuzz runs, process-level CLI smoke and a saved compiled-binary demo; the recorder replaces test/results/latest. A pre-release native/platform gate and license selection are required before automatic publication. No workflow currently publishes a release.
+CLAUDE.md is the only plan and handoff. AGENTS.md points to it. Follow the supplied chatgpt-project-standards.md. Linux/macOS CI runs formatting, vet, race tests, fixture checks, six bounded fuzz runs, process-level CLI smoke, a saved compiled-binary demo and isolated resource observations; the recorder replaces test/results/latest. A pre-release native/platform gate and license selection are required before automatic publication. No workflow currently publishes a release.
 
 Website work is deferred to the final session. The site repository and ebyte.org connection will be supplied later; no site or studio listing is being published during code prototyping.

@@ -32,9 +32,14 @@ go test -race -count=1 -v -timeout=60s ./...
 go test -run='^$' -fuzz=FuzzDecodePacket -fuzztime=5s -parallel=2 -timeout=60s .
 go test -run='^$' -fuzz=FuzzLoadAndEncode -fuzztime=5s -parallel=2 -timeout=60s .
 go test -run='^$' -fuzz=FuzzLosslessPacket -fuzztime=5s -parallel=2 -timeout=60s .
+go test -run='^$' -fuzz=FuzzLosslessShapes -fuzztime=5s -parallel=2 -timeout=60s .
+go test -run='^$' -fuzz=FuzzCompile -fuzztime=5s -parallel=2 -timeout=60s .
+go test -run='^$' -fuzz=FuzzCLIArguments -fuzztime=5s -parallel=2 -timeout=60s ./cmd/ebyte
 build_dir="$(mktemp -d)"
 trap 'rm -rf "$build_dir"' EXIT
 go build -o "$build_dir/ebyte" ./cmd/ebyte
 python3 scripts/smoke.py "$build_dir/ebyte"
 python3 scripts/demo.py "$build_dir/ebyte" test/results/latest/demo.json
-printf 'PASS: formatting, vet, race, independent fixture/decoder oracles, bounded decoder/document/lossless fuzz, build and operational CLI smoke and saved round-trip demo\n'
+go build -o "$build_dir/resourcecheck" ./internal/resourcecheck
+python3 scripts/resources.py "$build_dir/resourcecheck" test/results/latest/resources.json
+printf 'PASS: formatting, vet, race, independent fixture/decoder oracles, six bounded fuzz targets, build and operational CLI smoke and saved round-trip demo and resource observations\n'

@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/softdevstudio/ebyte"
 )
@@ -82,11 +83,23 @@ func reportContext(ctx context.Context, w io.Writer, err error) int {
 			return report(w, err)
 		}
 		if d != nil && d.Code == "write_failed" {
-			cancelled := commandFailure("cancelled", "context cancelled; partial output may remain").(*ebyte.Diagnostic)
+			observed := d.Observed
+			if utf8.RuneCountInString("context cancelled; "+observed) <= 96 {
+				observed = "context cancelled; " + observed
+			}
+			cancelled := commandFailure("cancelled", observed).(*ebyte.Diagnostic)
+			cancelled.Path = d.Path
 			cancelled.Offset = d.Offset
+			cancelled.FieldStart = d.FieldStart
 			err = cancelled
 		} else {
-			err = commandCancelled(ctx)
+			cancelled := commandCancelled(ctx).(*ebyte.Diagnostic)
+			if d != nil {
+				cancelled.Path = d.Path
+				cancelled.Offset = d.Offset
+				cancelled.FieldStart = d.FieldStart
+			}
+			err = cancelled
 		}
 	}
 	return report(w, err)
