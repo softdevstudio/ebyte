@@ -29,8 +29,9 @@ fi
 python3 -m unittest discover -s scripts -p "test_*.py" -v
 go vet ./...
 go test -race -count=1 -v -timeout=60s ./...
+go test -run='^$' -fuzz=FuzzDecodePacket -fuzztime=5s -parallel=2 -timeout=60s .
 build_dir="$(mktemp -d)"
 trap 'rm -rf "$build_dir"' EXIT
 go build -o "$build_dir/ebyte" ./cmd/ebyte
 python3 scripts/smoke.py "$build_dir/ebyte"
-printf 'PASS: formatting, vet, race, independent fixture oracles, build and executable skeleton smoke\n'
+printf 'PASS: formatting, vet, race, independent fixture/decoder oracles, bounded decoder fuzz, build and executable skeleton smoke\n'

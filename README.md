@@ -4,7 +4,7 @@ EByte is a binary schema engine being built in Go. Describe a format once, decod
 
 ## Current functionality
 
-This 0.0.0-dev build compiles strict, bounded schemas through the Go library. Only --version and --help work in the CLI. Decoding, encoding and field inspection are not implemented. No executable release is available; license selection is pending. An unchanged byte-identical round trip is the implementation's acceptance target, not a current feature claim.
+This 0.0.0-dev build compiles bounded schemas and decodes binary input to editable values and field traces through the Go library. Only --version and --help work in the CLI. Encoding and operational CLI commands are not implemented. No executable release is available; license selection is pending. An unchanged byte-identical round trip is the implementation's acceptance target, not a current feature claim.
 
 ```sh
 go build -o /tmp/ebyte ./cmd/ebyte
@@ -28,9 +28,31 @@ if err != nil {
 fmt.Println(plan.Name(), plan.SchemaSHA256())
 ```
 
-Import github.com/softdevstudio/ebyte. Compile copies validated strings into an immutable plan and retains no caller buffer. Its SHA-256 identifies the exact validated bytes, including whitespace. Limits returns a copy of the plan's ceilings. Start with DefaultLimits and lower individual ceilings; zero is a real limit, and negative or above-default settings fail with limit_exceeded. Binary read/write ceilings are retained for future execution, rather than checked against speculative runtime sizes during compilation.
+Import github.com/softdevstudio/ebyte. Compile copies validated strings into an immutable plan and retains no caller buffer. Its SHA-256 identifies the exact validated bytes, including whitespace. Limits returns a copy of the plan's ceilings. Start with DefaultLimits and lower individual ceilings; zero is a real limit, and negative or above-default settings fail with limit_exceeded. Binary ceilings are checked during execution, rather than against speculative runtime sizes during compilation.
 
 Compilation rejects unknown, duplicate or null members, invalid UTF-8 and unpaired Unicode escapes, noncanonical dimensions, invalid assertions and unsafe references. Same-object references resolve only to earlier unconditional integers. A derived unsigned count binds to one later unconditional array and cannot drive another dimension. Diagnostics use schema-stage JSON property paths and null binary offsets; unknown member names are omitted from paths to avoid reflecting arbitrary input. Schema input is bounded before JSON parsing, JSON nesting has an additional safety ceiling of 40, and declarations/array scope depth and literal dimensions are checked before compiled-plan allocation. The schema byte ceiling also bounds the temporary JSON tree; this is not a streaming or constant-memory compiler.
+
+## Library decoding and inspection
+
+```go
+document, trace, err := plan.Decode(ctx, reader)
+if err != nil {
+    // document is nil. trace can contain labelled failed observations.
+    // A *ebyte.Diagnostic identifies the field and relevant byte positions.
+    return err
+}
+jsonBytes, err := json.Marshal(document)
+// Or request the same validation and trace without retaining the document:
+trace, err = plan.Inspect(ctx, anotherReader)
+```
+
+Decode returns (*Document, *Trace, error); Inspect returns (*Trace, error). Both use the same traversal and enforce both editable-value and trace budgets. Values materialize in memory; Inspect currently constructs and discards those values too. Plans can be shared across concurrent calls with separate readers. Results belong to the caller and may be edited, but there is no encoder yet. Do not change a result concurrently with serialization.
+
+Integers decode to decimal strings, byte fields to lowercase hex, and valid ASCII/UTF-8 strings retain embedded NUL and trailing spaces. Derived counts are omitted from editable values and observed in traces. Conditional fields that are absent have no value or trace entry. Limits cover binary bytes, field widths, array elements, independent value-node/trace-entry counts and the exact compact encoding/json byte sizes, including hex and escaping expansion. Pretty printing, added newlines or caller edits may increase serialized sizes beyond the checked compact result.
+
+A failure returns no editable document. Its trace marks affected ancestors failed and records only consumed bytes, keeping earlier completed siblings intact. Integer observations appear only after a full representation is read; raw byte/string content never appears in traces or diagnostics. If the failed trace envelope and diagnostic cannot fit the trace byte limit, the trace is nil and the diagnostic is still returned. Diagnostic stage is io for reader failures and decode for truncation, representation, limit or cancellation failures.
+
+Readers need no seeking. A field that exceeds the remaining input budget fails before reading that field. Successful decoding also checks for trailing data, consuming at most one extra byte; an extra probe byte at the input ceiling reports limit_exceeded. EOF with the last field's bytes requires no further read. A hundred consecutive zero-byte reads without an error report read_failed. Context cancellation is checked between reads and during traversal; it cannot interrupt a Reader blocked inside Read. Pass a non-nil context and a Reader obeying Go's io.Reader contract.
 
 ## Contracts and fixtures
 
