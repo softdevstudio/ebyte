@@ -200,7 +200,7 @@ func (l *documentLoader) value(f field, path string) (any, error) {
 	if e != nil {
 		return nil, encodeFailure("invalid_document", path)
 	}
-	if f.kind != "array" {
+	if f.kind != "array" && f.kind != "repeat" {
 		s, ok := tok.(string)
 		if !ok {
 			return nil, encodeFailure("invalid_document", path)
@@ -262,6 +262,15 @@ type encoder struct {
 	ctx             context.Context
 	nodes, docBytes int
 	out             []byte
+	// tagEnds records where each tag_mismatch repeat ended, so prepare can
+	// reject output whose next bytes would read as one more element.
+	tagEnds []tagEnd
+}
+
+type tagEnd struct {
+	path   string
+	offset int
+	tag    []byte
 }
 
 func (p *Plan) prepare(ctx context.Context, doc *Document) ([]byte, error) {
@@ -280,6 +289,13 @@ func (p *Plan) prepare(ctx context.Context, doc *Document) ([]byte, error) {
 	enc := encoder{plan: p, ctx: ctx, docBytes: len(`{"document_version":1,"schema_sha256":"`) + len(p.digest) + len(`","values":`) + 1, out: []byte{}}
 	if e := enc.object(p.fields, doc.Values, ""); e != nil {
 		return nil, e
+	}
+	for _, t := range enc.tagEnds {
+		if bytes.HasPrefix(enc.out[t.offset:], t.tag) {
+			d := encodePosition("constraint_mismatch", t.path, t.offset, t.offset).(*Diagnostic)
+			d.Expected, d.Observed = "bytes after a repeat differ from its tag", "following bytes repeat the tag"
+			return nil, d
+		}
 	}
 	return enc.out, nil
 }
@@ -380,6 +396,12 @@ func (e *encoder) object(fields []field, m map[string]any, path string) error {
 			observed[i] = s
 			continue
 		}
+		if f.kind == "repeat" {
+			if err := e.repeat(f, v, p); err != nil {
+				return err
+			}
+			continue
+		}
 		n, err := e.dimension(f, observed, p)
 		if err != nil {
 			return err
@@ -463,6 +485,45 @@ func (e *encoder) object(fields []field, m map[string]any, path string) error {
 			}
 			e.out = append(e.out, s...)
 		}
+	}
+	return nil
+}
+
+// repeat encodes every element in order. Each element must produce at least one
+// byte, matching the decoder, which never reads an empty element.
+func (e *encoder) repeat(f field, v any, path string) error {
+	a, ok := v.([]any)
+	if !ok || a == nil {
+		return encodeFailure("invalid_document", path)
+	}
+	if len(a) > e.plan.limits.MaxArrayElements || len(a) > e.plan.limits.MaxValueNodes-e.nodes-1 {
+		return encodeFailure("limit_exceeded", path)
+	}
+	size := 2
+	if len(a) > 0 {
+		size += len(a) - 1
+	}
+	if err := e.budget(path, 1, size); err != nil {
+		return err
+	}
+	for j, item := range a {
+		child := path + "/" + strconv.Itoa(j)
+		obj, ok := item.(map[string]any)
+		if !ok {
+			return encodeFailure("invalid_document", child)
+		}
+		before := len(e.out)
+		if err := e.object(f.children, obj, child); err != nil {
+			return err
+		}
+		if len(e.out) == before {
+			d := encodeFailure("value_out_of_range", child).(*Diagnostic)
+			d.Expected, d.Observed = "repeat element encodes at least one byte", "empty repeat element"
+			return d
+		}
+	}
+	if f.until == untilTag {
+		e.tagEnds = append(e.tagEnds, tagEnd{path, len(e.out), f.tag})
 	}
 	return nil
 }

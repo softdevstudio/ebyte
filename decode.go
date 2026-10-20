@@ -1,6 +1,7 @@
 package ebyte
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"fmt"
@@ -41,6 +42,7 @@ type decoder struct {
 	ctx        context.Context
 	reader     io.Reader
 	eof        bool
+	pending    []byte // bytes peeked by a repeat but not yet consumed
 	pos        int64
 	nodes      int
 	docBytes   int
@@ -260,6 +262,9 @@ func (d *decoder) value(f field, path string, observed []string) (value any, int
 		}
 		return s, s, nil
 	}
+	if f.kind == "repeat" {
+		return d.repeat(f, path, start)
+	}
 	n, e := d.dimension(f, observed, path)
 	if e != nil {
 		return nil, "", e
@@ -338,6 +343,59 @@ func (d *decoder) value(f field, path string, observed []string) (value any, int
 	}
 	return string(raw), "", nil
 }
+
+// repeat decodes elements until the input ends (end_of_input) or the next
+// bytes no longer equal the element's leading tag (tag_mismatch). Elements are
+// charged to the same budgets as array elements, one at a time.
+func (d *decoder) repeat(f field, path string, start int64) (any, string, error) {
+	if e := d.documentBudget(path, &start, 1, 2); e != nil {
+		return nil, "", e
+	}
+	a := []any{}
+	for {
+		if e := d.cancel(path, &start); e != nil {
+			return nil, "", e
+		}
+		more := false
+		if f.until == untilEnd {
+			next, e := d.peek(1, path, start)
+			if e != nil {
+				return nil, "", e
+			}
+			more = len(next) == 1
+		} else {
+			next, e := d.peek(len(f.tag), path, start)
+			if e != nil {
+				return nil, "", e
+			}
+			more = bytes.Equal(next, f.tag)
+		}
+		if !more {
+			return a, "", nil
+		}
+		elementPath := path + "/" + strconv.Itoa(len(a))
+		if len(a) >= d.plan.limits.MaxArrayElements {
+			return nil, "", d.limit(elementPath, &d.pos)
+		}
+		separator := 2
+		if len(a) > 0 {
+			separator++
+		}
+		if e := d.documentBudget(elementPath, &d.pos, 0, separator); e != nil {
+			return nil, "", e
+		}
+		before := d.pos
+		obj, e := d.object(f.children, elementPath)
+		if e != nil {
+			return nil, "", e
+		}
+		if d.pos == before {
+			// An element that reads nothing would repeat forever and can't round-trip.
+			return nil, "", d.diagnostic("constraint_mismatch", elementPath, &before, before, "repeat element reads at least one byte", "empty repeat element")
+		}
+		a = append(a, obj)
+	}
+}
 func hexDigit(b byte) byte {
 	if b <= '9' {
 		return b - '0'
@@ -352,7 +410,9 @@ func (d *decoder) read(n int, path string, start int64) ([]byte, error) {
 		return nil, e
 	}
 	raw := make([]byte, n)
-	done := 0
+	done := copy(raw, d.pending)
+	d.pending = d.pending[done:]
+	d.pos += int64(done)
 	empty := 0
 	for done < n {
 		if e := d.cancel(path, &start); e != nil {
@@ -396,7 +456,48 @@ func (d *decoder) read(n int, path string, start int64) ([]byte, error) {
 	}
 	return raw, nil
 }
+
+// peek returns up to n upcoming bytes without consuming them. Fewer than n
+// bytes means the input ends first. Peeked bytes stay in d.pending and are
+// served to the next read, so offsets and traces are unaffected.
+func (d *decoder) peek(n int, path string, start int64) ([]byte, error) {
+	empty := 0
+	for len(d.pending) < n && !d.eof {
+		if e := d.cancel(path, &start); e != nil {
+			return nil, e
+		}
+		buf := make([]byte, n-len(d.pending))
+		got, e := d.reader.Read(buf)
+		if got < 0 || got > len(buf) {
+			return nil, d.diagnostic("read_failed", path, &start, d.pos, "valid reader result", "invalid reader count")
+		}
+		d.pending = append(d.pending, buf[:got]...)
+		if e == io.EOF || e == io.ErrUnexpectedEOF {
+			d.eof = true
+		} else if e != nil {
+			return nil, d.diagnostic("read_failed", path, &start, d.pos, "readable input", "reader error")
+		}
+		if got == 0 && !d.eof {
+			empty++
+			if empty >= 100 {
+				return nil, d.diagnostic("read_failed", path, &start, d.pos, "reader progress", "reader made no progress")
+			}
+		} else {
+			empty = 0
+		}
+	}
+	if len(d.pending) < n {
+		return d.pending, nil
+	}
+	return d.pending[:n], nil
+}
 func (d *decoder) probe() error {
+	if len(d.pending) > 0 {
+		if d.pos >= int64(d.plan.limits.MaxInputBytes) {
+			return d.limit("", nil)
+		}
+		return d.diagnostic("trailing_data", "", nil, d.pos, "end of input", "additional byte")
+	}
 	var buf [1]byte
 	for empty := 0; empty < 100; empty++ {
 		if e := d.cancel("", nil); e != nil {

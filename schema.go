@@ -70,7 +70,18 @@ type field struct {
 	children                             []field
 	when                                 *condition
 	derive                               int
+	// until is set for repeat fields: "end_of_input" or "tag_mismatch".
+	until string
+	tag   []byte
 }
+
+// Repeat stop rules. A tag_mismatch repeat's first child is a fixed-length
+// bytes field with expect; elements continue while the next bytes equal it.
+const (
+	untilEnd = "end_of_input"
+	untilTag = "tag_mismatch"
+	maxTag   = 16
+)
 
 var identifier = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]{0,63}$`)
 var decimal = regexp.MustCompile(`^(0|-?[1-9][0-9]*)$`)
@@ -175,7 +186,7 @@ func validEscapes(raw []byte) bool {
 func safePath(path, key string) string {
 	// Only grammar member names enter diagnostics; arbitrary unknown keys stay private.
 	switch key {
-	case "schema_version", "name", "endian", "fields", "type", "length", "count", "encoding", "expect", "when", "derive", "field", "equals", "count_of":
+	case "schema_version", "name", "endian", "fields", "type", "length", "count", "encoding", "expect", "when", "derive", "field", "equals", "count_of", "until":
 		return path + "/" + key
 	}
 	return path
@@ -347,6 +358,8 @@ func compileFields(v any, path string, depth int, endian string, limits Limits, 
 			required = append(required, "length", "encoding")
 		case kind == "array":
 			required = append(required, "count", "fields")
+		case kind == "repeat":
+			required = append(required, "until", "fields")
 		default:
 			return nil, failure("invalid_schema", p+"/type")
 		}
@@ -421,7 +434,7 @@ func compileFields(v any, path string, depth int, endian string, limits Limits, 
 			f.expect = s
 			f.hasExpect = true
 		}
-		if kind == "array" {
+		if kind == "array" || kind == "repeat" {
 			if depth >= limits.MaxDepth {
 				return nil, failure("limit_exceeded", p+"/fields")
 			}
@@ -430,6 +443,30 @@ func compileFields(v any, path string, depth int, endian string, limits Limits, 
 				return nil, e
 			}
 			f.children = children
+		}
+		if kind == "repeat" {
+			until, ok := m["until"].(string)
+			switch {
+			case ok && until == untilEnd:
+				// End of input only means something for the last top-level field.
+				if depth != 0 || i != len(a)-1 || f.when != nil {
+					return nil, failure("invalid_schema", p+"/until")
+				}
+			case ok && until == untilTag:
+				if len(f.children) == 0 {
+					return nil, failure("invalid_schema", p+"/fields")
+				}
+				tag := f.children[0]
+				if tag.kind != "bytes" || tag.when != nil || !tag.hasExpect || tag.length.dynamic || tag.length.literal == 0 || tag.length.literal > maxTag {
+					return nil, failure("invalid_schema", p+"/fields/0")
+				}
+			default:
+				return nil, failure("invalid_schema", p+"/until")
+			}
+			f.until = until
+			if until == untilTag {
+				f.tag, _ = hex.DecodeString(f.children[0].expect)
+			}
 		}
 		if _, exists := m["derive"]; exists {
 			if !unsigned || f.when != nil || f.hasExpect {

@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "name": "riff_wave",
+  "endian": "little",
+  "fields": [
+    {"name": "riff", "type": "bytes", "length": 4, "expect": "52494646"},
+    {"name": "riff_size", "type": "u32"},
+    {"name": "wave", "type": "bytes", "length": 4, "expect": "57415645"},
+    {"name": "chunks", "type": "repeat", "until": "end_of_input", "fields": [
+      {"name": "id", "type": "string", "encoding": "ascii", "length": 4},
+      {"name": "size", "type": "u32"},
+      {"name": "body", "type": "bytes", "length": {"field": "size"}}
+    ]}
+  ]
+}

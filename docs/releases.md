@@ -1,6 +1,6 @@
 # EByte releases
 
-EByte v0.1.0 was the first implemented release under Apache License 2.0; v0.1.1 is a fix release. Public release titles use EByte vX.Y.Z and archives have no version in their filenames. Linux amd64/arm64 and macOS amd64/arm64 use tar.gz; Windows amd64 uses zip. Each archive contains the CLI, manual, license/notice files, examples, release.json and GO-NOTICES from the exact building toolchain. No external Go modules are linked.
+EByte v0.1.0 was the first implemented release under Apache License 2.0; v0.1.1 is a fix release and v0.2.0 adds repeating blocks. Public release titles use EByte vX.Y.Z and archives have no version in their filenames. Linux amd64/arm64 and macOS amd64/arm64 use tar.gz; Windows amd64 uses zip. Each archive contains the CLI, manual, license/notice files, examples, release.json and GO-NOTICES from the exact building toolchain. No external Go modules are linked.
 
 Release waits for successful Linux/macOS CI on the same current main-push SHA. Workflow actions are pinned to commit SHAs and Python to 3.13, and post-publication API reads are authenticated when a token is available while asset downloads stay anonymous. Independent review is a session gate recorded in CLAUDE.md. Separate packaging jobs test the library and native CLI on Linux, macOS and Windows. Native binaries are checked again after extraction; the other architectures are explicitly cross-built and unexecuted. release.json and RELEASE-MANIFEST.json record actual host verification rather than implying every archive ran natively. A clean checkout and embedded Go VCS revision bind binaries to the tested source. Build candidates using --local are forbidden in Actions and rejected by the publication validator.
 
@@ -13,6 +13,13 @@ Windows supports file input and stdin/stdout but --output FILE publication delib
 ## Changes
 
 Release notes include the section for their own version from this list.
+
+### EByte v0.2.0
+
+- New field type repeat: a block of fields repeated until the end of the input, or while the next bytes match a tag of 1 to 16 bytes.
+- Elements can be added or removed in the editable JSON with no count to keep in step; encode refuses output that would decode differently.
+- Schema library: riff-wave.schema.json reads any WAV as a list of chunks, including LIST metadata, and zip.schema.json reads archives with any number of entries.
+- A seventh fuzz target checks that accepted repeat inputs re-encode to the same bytes.
 
 ### EByte v0.1.1
 
