@@ -1,16 +1,21 @@
-UTC: 2026-10-20T11:00:24Z
+UTC: 2026-10-20T11:43:09Z
 go version go1.27.3 linux/amd64
 linux
 amd64
 1
-Source SHA256: a416604197c2bb0fd45e7b1f65cfb95e5edd703ab8bd2e80c437fe59f303b8e7
+Source SHA256: bed4d3352e0902fa156b5f3eaae30cc2bd6b9085c5f279564fa9ffcdd046d0d5
+test_archive_paths_and_links_are_refused (test_release.ReleaseSafetyTests.test_archive_paths_and_links_are_refused) ... ok
+test_failed_cleanup_is_reported (test_release.ReleaseSafetyTests.test_failed_cleanup_is_reported) ... ok
+test_failed_upload_cleans_only_owned_draft_and_tag (test_release.ReleaseSafetyTests.test_failed_upload_cleans_only_owned_draft_and_tag) ... ok
+test_public_verification_failure_keeps_published_release (test_release.ReleaseSafetyTests.test_public_verification_failure_keeps_published_release) ... ok
+test_redirects_strip_credentials_and_refuse_http (test_release.ReleaseSafetyTests.test_redirects_strip_credentials_and_refuse_http) ... ok
 test_does_not_follow_links_inside_latest (test_results.LatestResultsTests.test_does_not_follow_links_inside_latest) ... ok
 test_rejects_files_without_removal (test_results.LatestResultsTests.test_rejects_files_without_removal) ... ok
 test_rejects_symlink_at_every_managed_component (test_results.LatestResultsTests.test_rejects_symlink_at_every_managed_component) ... ok
 test_replaces_latest_and_preserves_release_evidence (test_results.LatestResultsTests.test_replaces_latest_and_preserves_release_evidence) ... ok
 
 ----------------------------------------------------------------------
-Ran 4 tests in 0.004s
+Ran 9 tests in 0.012s
 
 OK
 === RUN   TestDecodeIndependentGoldens
@@ -261,8 +266,10 @@ OK
 --- PASS: FuzzCompile (0.00s)
     --- PASS: FuzzCompile/seed#0 (0.00s)
     --- PASS: FuzzCompile/seed#1 (0.00s)
+=== RUN   ExamplePlan_Encode
+--- PASS: ExamplePlan_Encode (0.00s)
 PASS
-ok  	github.com/softdevstudio/ebyte	1.109s
+ok  	github.com/softdevstudio/ebyte	1.123s
 === RUN   TestOperationalCommands
 === RUN   TestOperationalCommands/packet
 === RUN   TestOperationalCommands/wide
@@ -340,49 +347,49 @@ ok  	github.com/softdevstudio/ebyte	1.109s
     --- PASS: FuzzCLIArguments/seed#1 (0.00s)
     --- PASS: FuzzCLIArguments/seed#2 (0.00s)
 PASS
-ok  	github.com/softdevstudio/ebyte/cmd/ebyte	1.056s
+ok  	github.com/softdevstudio/ebyte/cmd/ebyte	1.069s
 ?   	github.com/softdevstudio/ebyte/internal/resourcecheck	[no test files]
-fuzz: elapsed: 0s, gathering baseline coverage: 0/62 completed
-fuzz: elapsed: 0s, gathering baseline coverage: 62/62 completed, now fuzzing with 2 workers
-fuzz: elapsed: 3s, execs: 4363 (1454/sec), new interesting: 1 (total: 63)
-fuzz: elapsed: 6s, execs: 4363 (0/sec), new interesting: 1 (total: 63)
-fuzz: elapsed: 6s, execs: 4363 (0/sec), new interesting: 1 (total: 63)
+fuzz: elapsed: 0s, gathering baseline coverage: 0/37 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 37/37 completed, now fuzzing with 2 workers
+fuzz: elapsed: 3s, execs: 20439 (6810/sec), new interesting: 4 (total: 41)
+fuzz: elapsed: 6s, execs: 20439 (0/sec), new interesting: 4 (total: 41)
+fuzz: elapsed: 6s, execs: 20439 (0/sec), new interesting: 4 (total: 41)
 PASS
-ok  	github.com/softdevstudio/ebyte	6.025s
-fuzz: elapsed: 0s, gathering baseline coverage: 0/132 completed
-fuzz: elapsed: 0s, gathering baseline coverage: 132/132 completed, now fuzzing with 2 workers
-fuzz: elapsed: 3s, execs: 32503 (10831/sec), new interesting: 4 (total: 136)
-fuzz: elapsed: 6s, execs: 32503 (0/sec), new interesting: 4 (total: 136)
-fuzz: elapsed: 6s, execs: 32503 (0/sec), new interesting: 4 (total: 136)
-PASS
-ok  	github.com/softdevstudio/ebyte	6.018s
-fuzz: elapsed: 0s, gathering baseline coverage: 0/48 completed
-fuzz: elapsed: 0s, gathering baseline coverage: 48/48 completed, now fuzzing with 2 workers
-fuzz: elapsed: 3s, execs: 16160 (5383/sec), new interesting: 2 (total: 50)
-fuzz: elapsed: 6s, execs: 16160 (0/sec), new interesting: 2 (total: 50)
-fuzz: elapsed: 6s, execs: 16160 (0/sec), new interesting: 2 (total: 50)
-PASS
-ok  	github.com/softdevstudio/ebyte	6.011s
-fuzz: elapsed: 0s, gathering baseline coverage: 0/103 completed
-fuzz: elapsed: 0s, gathering baseline coverage: 103/103 completed, now fuzzing with 2 workers
-fuzz: elapsed: 3s, execs: 29664 (9886/sec), new interesting: 20 (total: 123)
-fuzz: elapsed: 6s, execs: 29664 (0/sec), new interesting: 20 (total: 123)
-fuzz: elapsed: 6s, execs: 29664 (0/sec), new interesting: 20 (total: 123)
+ok  	github.com/softdevstudio/ebyte	6.027s
+fuzz: elapsed: 0s, gathering baseline coverage: 0/2 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 2/2 completed, now fuzzing with 2 workers
+fuzz: elapsed: 3s, execs: 110413 (36798/sec), new interesting: 47 (total: 49)
+fuzz: elapsed: 6s, execs: 199853 (29809/sec), new interesting: 78 (total: 80)
+fuzz: elapsed: 6s, execs: 199853 (0/sec), new interesting: 78 (total: 80)
 PASS
 ok  	github.com/softdevstudio/ebyte	6.013s
-fuzz: elapsed: 0s, gathering baseline coverage: 0/95 completed
-fuzz: elapsed: 0s, gathering baseline coverage: 95/95 completed, now fuzzing with 2 workers
-fuzz: elapsed: 3s, execs: 16776 (5590/sec), new interesting: 15 (total: 110)
-fuzz: elapsed: 6s, execs: 16776 (0/sec), new interesting: 15 (total: 110)
-fuzz: elapsed: 6s, execs: 16776 (0/sec), new interesting: 15 (total: 110)
+fuzz: elapsed: 0s, gathering baseline coverage: 0/46 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 46/46 completed, now fuzzing with 2 workers
+fuzz: elapsed: 3s, execs: 40745 (13577/sec), new interesting: 5 (total: 51)
+fuzz: elapsed: 6s, execs: 40745 (0/sec), new interesting: 5 (total: 51)
+fuzz: elapsed: 6s, execs: 40745 (0/sec), new interesting: 5 (total: 51)
 PASS
-ok  	github.com/softdevstudio/ebyte	6.021s
-fuzz: elapsed: 0s, gathering baseline coverage: 0/14 completed
-fuzz: elapsed: 0s, gathering baseline coverage: 14/14 completed, now fuzzing with 2 workers
-fuzz: elapsed: 3s, execs: 103390 (34458/sec), new interesting: 2 (total: 16)
-fuzz: elapsed: 5s, execs: 182585 (39190/sec), new interesting: 2 (total: 16)
+ok  	github.com/softdevstudio/ebyte	6.013s
+fuzz: elapsed: 0s, gathering baseline coverage: 0/116 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 116/116 completed, now fuzzing with 2 workers
+fuzz: elapsed: 3s, execs: 15529 (5175/sec), new interesting: 11 (total: 127)
+fuzz: elapsed: 6s, execs: 15529 (0/sec), new interesting: 11 (total: 127)
+fuzz: elapsed: 6s, execs: 15529 (0/sec), new interesting: 11 (total: 127)
 PASS
-ok  	github.com/softdevstudio/ebyte/cmd/ebyte	5.026s
+ok  	github.com/softdevstudio/ebyte	6.013s
+fuzz: elapsed: 0s, gathering baseline coverage: 0/116 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 116/116 completed, now fuzzing with 2 workers
+fuzz: elapsed: 3s, execs: 17133 (5708/sec), new interesting: 17 (total: 133)
+fuzz: elapsed: 6s, execs: 17133 (0/sec), new interesting: 17 (total: 133)
+fuzz: elapsed: 6s, execs: 17133 (0/sec), new interesting: 17 (total: 133)
+PASS
+ok  	github.com/softdevstudio/ebyte	6.018s
+fuzz: elapsed: 0s, gathering baseline coverage: 0/18 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 18/18 completed, now fuzzing with 2 workers
+fuzz: elapsed: 3s, execs: 107052 (35677/sec), new interesting: 1 (total: 19)
+fuzz: elapsed: 5s, execs: 186333 (38453/sec), new interesting: 1 (total: 19)
+PASS
+ok  	github.com/softdevstudio/ebyte/cmd/ebyte	5.067s
 PASS: compiled CLI stdin round trip, failed traces, limit exits, collision protection and argument privacy
 PASS: broken stdout pipes exit 1 with diagnostics; SIGINT exits 3 while stdin remains open
 PASS: built-CLI demo, 21-byte exact round trip; added record gives 25 bytes, count 3, note offset 23

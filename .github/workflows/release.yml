@@ -1,0 +1,102 @@
+name: Release
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: ebyte-release
+  cancel-in-progress: false
+jobs:
+  plan:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    outputs:
+      publish: ${{ steps.plan.outputs.publish }}
+      version: ${{ steps.plan.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - id: plan
+        run: python scripts/release_plan.py
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EBYTE_RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
+  package:
+    needs: plan
+    if: needs.plan.outputs.publish == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            family: linux
+          - runner: macos-latest
+            family: darwin
+          - runner: windows-latest
+            family: windows
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - run: go test ./...
+      - run: python scripts/package.py ${{ matrix.family }}
+        env:
+          EBYTE_RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: package-${{ matrix.family }}
+          path: dist/
+          if-no-files-found: error
+  publish:
+    needs: [plan, package]
+    if: needs.plan.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: package-*
+          path: dist/
+          merge-multiple: true
+      - run: python scripts/release_bundle.py "$VERSION" "$SOURCE_SHA"
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
+          SOURCE_SHA: ${{ github.event.workflow_run.head_sha }}
+      - run: python scripts/publish_release.py "$VERSION" "$SOURCE_SHA"
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
+          SOURCE_SHA: ${{ github.event.workflow_run.head_sha }}
+          GH_TOKEN: ${{ github.token }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-verification
+          path: dist/public-verification.json

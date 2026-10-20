@@ -15,7 +15,7 @@ import (
 	"github.com/softdevstudio/ebyte"
 )
 
-const helpText = `EByte development build
+const helpText = `EByte
 Usage: ebyte COMMAND --schema FILE [--input FILE|-] [--output FILE|-]
 Commands: validate-schema, decode, encode, inspect
 inspect: --format json|text (default json)
@@ -25,7 +25,7 @@ Limits can only lower defaults: --max-schema-bytes, --max-schema-fields,
 --max-depth, --max-input-bytes, --max-output-bytes, --max-field-bytes,
 --max-array-elements, --max-value-nodes, --max-trace-entries,
 --max-document-bytes, --max-trace-bytes.
-Available: --help, --version. No public release is available. See README.md.
+Available: --help, --version. See README.md.
 `
 
 var errUsage = errors.New("invalid command arguments")

@@ -1,6 +1,6 @@
 # EByte command reference
 
-The current binary is 0.0.0-dev, with no public release yet. Build it from the repository with Go pinned by go.mod: go build -o /tmp/ebyte ./cmd/ebyte. Commands share the library interpreter and its strict schema/document contracts. They never guess a binary format. Pass its schema explicitly.
+The current release version is 0.1.0, licensed under Apache License 2.0. Build it from the repository with Go pinned by go.mod: go build -o /tmp/ebyte ./cmd/ebyte. Commands share the library interpreter and its strict schema/document contracts. They never guess a binary format. Pass its schema explicitly.
 
 ## Commands
 

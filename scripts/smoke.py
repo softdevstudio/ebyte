@@ -2,6 +2,7 @@
 """Exercise operational commands through the compiled binary."""
 from pathlib import Path
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -16,7 +17,8 @@ def run(args, data=None):
     return subprocess.run([binary, *args], input=data, capture_output=True, timeout=15)
 
 
-assert run(['--version']).stdout == b'ebyte 0.0.0-dev\n'
+version = re.search(r'const Version = "([^"]+)"', (root / 'version.go').read_text()).group(1)
+assert run(['--version']).stdout == ('ebyte ' + version + '\n').encode()
 assert run(['--help']).returncode == 0
 result = run(['decode', '--schema', schema, '--input=-'], original)
 assert result.returncode == 0 and not result.stderr

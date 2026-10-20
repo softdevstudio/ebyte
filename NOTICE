@@ -1,4 +1,9 @@
 EByte
 Copyright 2026 EByte contributors
 
-License selection is pending. No executable release is authorized by this file.
+Licensed under the Apache License, Version 2.0.
+The LICENSE file contains the license terms.
+
+Binary distributions include Go standard library code and the license notices
+from the exact building toolchain in GO-NOTICES. Those components retain their
+own licenses; see THIRD_PARTY_LICENSES.md.

@@ -4,7 +4,7 @@ EByte is a binary schema engine being built in Go. Describe a format once, decod
 
 ## Current functionality
 
-This 0.0.0-dev build compiles bounded schemas, decodes binary input to editable values and field traces, and encodes validated documents through the Go library. The CLI provides validate-schema, decode, encode and inspect, including JSON/text traces and stdin/stdout. No executable release is available; license selection is pending. Unchanged round trips are checked against independent byte fixtures and bounded fuzz tests.
+EByte compiles bounded schemas, decodes binary input to editable values and field traces, and encodes validated documents through the Go library. The CLI provides validate-schema, decode, encode and inspect, including JSON/text traces and stdin/stdout. EByte is licensed under Apache License 2.0. Unchanged round trips are checked against independent byte fixtures and bounded fuzz tests.
 
 ```sh
 go build -o /tmp/ebyte ./cmd/ebyte
@@ -21,6 +21,12 @@ python3 scripts/demo.py /tmp/ebyte /tmp/ebyte-demo.json
 ```
 
 The built-binary demo starts with the independently specified 21-byte packet, decodes it, verifies an unchanged byte-identical re-encode, adds one record and checks the specified 25-byte output. Its saved evidence includes hashes, values and before/after traces: the derived count changes from 2 to 3 and the note moves from offset 19 to 23. This is a small synthetic format demonstration, not a throughput or general-format compatibility claim. The recorder saves its real run to test/results/latest/demo.json.
+
+## Downloads and license
+
+Get binaries from [GitHub Releases](https://github.com/softdevstudio/ebyte/releases/latest). Archive names are ebyte-linux-amd64.tar.gz, ebyte-linux-arm64.tar.gz, ebyte-darwin-amd64.tar.gz, ebyte-darwin-arm64.tar.gz and ebyte-windows-amd64.zip. Verify them with SHA256SUMS. The release manifest records the source commit, building Go version, archive/binary hashes and native versus cross-build checks. Windows supports file input and stdin/stdout; --output FILE publication remains disabled there. [Release reference](docs/releases.md) explains packaging and limitations.
+
+The code is licensed under [Apache License 2.0](LICENSE). Archives include the project NOTICE and exact-toolchain GO-NOTICES for components retaining their own licenses.
 
 ## Library schema compilation
 
@@ -94,6 +100,6 @@ Resource observations record actual document/trace sizes, bytes read, round-trip
 
 ## Development and delivery
 
-CLAUDE.md is the only plan and handoff. AGENTS.md points to it. Follow the supplied chatgpt-project-standards.md. Linux/macOS CI runs formatting, vet, race tests, fixture checks, six bounded fuzz runs, process-level CLI smoke, a saved compiled-binary demo and isolated resource observations; the recorder replaces test/results/latest. A pre-release native/platform gate and license selection are required before automatic publication. No workflow currently publishes a release.
+CLAUDE.md is the only plan and handoff. AGENTS.md points to it. Follow the supplied chatgpt-project-standards.md. Linux/macOS CI runs formatting, vet, race tests, fixture checks, six bounded fuzz runs, process-level CLI smoke, a saved compiled-binary demo and isolated resource observations; the recorder replaces test/results/latest. The release workflow runs after successful exact-source CI, builds five archives, verifies native binaries on Linux/macOS/Windows and checks every public tag/latest asset after publication. Linux arm64 and macOS amd64 archives are cross-built unless the corresponding host is available; release metadata records the actual verification for each archive.
 
 Website work is deferred to the final session. The site repository and ebyte.org connection will be supplied later; no site or studio listing is being published during code prototyping.
