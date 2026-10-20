@@ -2,9 +2,9 @@
 
 ## Project facts
 
-Domain: ebyte.org, to be connected later.
+Domain: ebyte.org, being connected by YK on October 20, 2026.
 Code: https://github.com/softdevstudio/ebyte, main only.
-Website repository: not created; user will supply it later.
+Website repository: https://github.com/photozeitgeist/ebyte.org (Hugo Launch template, main only), supplied by YK on October 20, 2026.
 Language: Go, pinned to 1.27.3 for this project.
 License: Apache License 2.0, explicitly selected by YK on October 20, 2026. LICENSE is the full license; NOTICE identifies EByte contributors. Binary archives retain separate exact-toolchain notices.
 Contact: info@ebyte.org for the future website.
@@ -66,8 +66,8 @@ All seven public assets were verified at both the version tag and latest by the 
 
 Independent release/API/security review without implementation history found no blockers in source gates, packaging, native/cross labels, licensing, draft cleanup or public verification. The final local recorder passed formatting, Python safety checks, Go vet/race, all six bounded fuzz targets, real process smoke, the round-trip/edit demo and ten resource observations; native packaging also passed the executable API example and archive smoke checks. Archive traversal/link rejection, cross-host credential stripping and failed publication/cleanup paths have dedicated safety tests.
 
-No website/domain or studio work has been done. The site repository and domain connection are still supplied later by YK.
+October 20, 2026, session eight (site): YK supplied photozeitgeist/ebyte.org, a copy of the ukue site. All ukue pages, posts and images were removed; theme and structure are unchanged. New content: config values, about, contact, quick start, download, schema reference and command reference pages, and five posts (launch, plain-language explainer, testing, name, and a WAV case study run with the downloaded v0.1.0 Linux binary), each with its own SVG in static/images. Hugo 0.168 built it cleanly; internal links, frontmatter, titles and every download link were checked. A quick independent read-only review (no tests run) found no high-severity issues; its medium/low findings are listed under Next and were not fixed. The studio listing on softdevstudio.com has not been done.
 
 ## Next
 
-Pause and report the completed v0.1.0 code release after the evidence/handoff commit passes Linux/macOS CI. Session eight starts only after YK supplies the website repository and ebyte.org connection; preserve its supplied Hugo template/major structure and replace content/config only. Follow the website/studio standards, read the studio CONTENT-PLAN.md before the launch listing/note, and finish live-site checks. Do not invent or create a website repository early. Structural diff remains outside v1.
+Wait for YK's go-ahead before any of these. 1) Check ebyte.org live once the domain resolves (pages, images, download links). 2) Add EByte to softdevstudio.com after reading its CONTENT-PLAN.md. 3) Review findings to decide on: release_plan.py cannot see an orphaned draft because /releases/tags/{tag} ignores drafts (medium); --output with a trailing separator creates out/out; published outputs are 0600 but docs say only staging is private; SIGTERM can leave .ebyte-*.tmp staging files; text inspect can replace the real diagnostic with limit_exceeded; readBounded maps unexpected EOF to truncated_input exit 2 at stage io; decode diagnostics alias d.pos; actions pinned by major tag; unauthenticated API reads in verify_release.py. Structural diff remains outside v1.

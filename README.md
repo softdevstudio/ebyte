@@ -1,6 +1,6 @@
 # EByte
 
-EByte is a binary schema engine being built in Go. Describe a format once, decode it to editable JSON, encode it back and inspect the field and byte offset where an assumption fails. The library and CLI share one interpreter, without generated code or a hosted service.
+EByte is a binary schema engine in Go. Describe a format once, decode it to editable JSON, encode it back and inspect the field and byte offset where an assumption fails. The library and CLI share one interpreter, without generated code or a hosted service.
 
 ## Current functionality
 
@@ -102,4 +102,4 @@ Resource observations record actual document/trace sizes, bytes read, round-trip
 
 CLAUDE.md is the only plan and handoff. AGENTS.md points to it. Follow the supplied chatgpt-project-standards.md. Linux/macOS CI runs formatting, vet, race tests, fixture checks, six bounded fuzz runs, process-level CLI smoke, a saved compiled-binary demo and isolated resource observations; the recorder replaces test/results/latest. The release workflow runs after successful exact-source CI, builds five archives, verifies native binaries on Linux/macOS/Windows and checks every public tag/latest asset after publication. Linux arm64 and macOS amd64 archives are cross-built unless the corresponding host is available; release metadata records the actual verification for each archive.
 
-Website work is deferred to the final session. The site repository and ebyte.org connection will be supplied later; no site or studio listing is being published during code prototyping.
+The website is ebyte.org, built from https://github.com/photozeitgeist/ebyte.org.
