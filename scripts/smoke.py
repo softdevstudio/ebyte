@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Exercise implemented skeleton behavior; do not imply codec functionality."""
+"""Exercise the CLI skeleton; operational codec commands remain unavailable."""
 from pathlib import Path
 import subprocess
 import sys

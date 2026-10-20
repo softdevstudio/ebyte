@@ -1,16 +1,16 @@
-UTC: 2026-10-20T10:17:30Z
+UTC: 2026-10-20T10:30:13Z
 go version go1.27.3 linux/amd64
 linux
 amd64
 1
-Source SHA256: b24d0f8baffe36b4c16e76658b37a85938a99a0233a84598c96a146fd02dca18
+Source SHA256: 176db41aee02365ad0e19b922835d64f71b3e14fa7e2b25665340a5bcc8d1a2f
 test_does_not_follow_links_inside_latest (test_results.LatestResultsTests.test_does_not_follow_links_inside_latest) ... ok
 test_rejects_files_without_removal (test_results.LatestResultsTests.test_rejects_files_without_removal) ... ok
 test_rejects_symlink_at_every_managed_component (test_results.LatestResultsTests.test_rejects_symlink_at_every_managed_component) ... ok
 test_replaces_latest_and_preserves_release_evidence (test_results.LatestResultsTests.test_replaces_latest_and_preserves_release_evidence) ... ok
 
 ----------------------------------------------------------------------
-Ran 4 tests in 0.008s
+Ran 4 tests in 0.005s
 
 OK
 === RUN   TestDecodeIndependentGoldens
@@ -18,7 +18,7 @@ OK
 === RUN   TestDecodeIndependentGoldens/wide
 === RUN   TestDecodeIndependentGoldens/empty
 === RUN   TestDecodeIndependentGoldens/stored
---- PASS: TestDecodeIndependentGoldens (0.01s)
+--- PASS: TestDecodeIndependentGoldens (0.00s)
     --- PASS: TestDecodeIndependentGoldens/packet (0.00s)
     --- PASS: TestDecodeIndependentGoldens/wide (0.00s)
     --- PASS: TestDecodeIndependentGoldens/empty (0.00s)
@@ -55,7 +55,7 @@ OK
 === RUN   TestIndependentDecodeBudgets/input
 === RUN   TestIndependentDecodeBudgets/document
 === RUN   TestIndependentDecodeBudgets/trace
---- PASS: TestIndependentDecodeBudgets (0.01s)
+--- PASS: TestIndependentDecodeBudgets (0.00s)
     --- PASS: TestIndependentDecodeBudgets/nodes (0.00s)
     --- PASS: TestIndependentDecodeBudgets/entries (0.00s)
     --- PASS: TestIndependentDecodeBudgets/input (0.00s)
@@ -75,6 +75,84 @@ OK
 --- PASS: TestUnexpectedEOFIsTruncation (0.00s)
 === RUN   TestConditionalZeroWidthNodeCeilings
 --- PASS: TestConditionalZeroWidthNodeCeilings (0.00s)
+=== RUN   TestIndependentEncodeGoldensAndRoundTrips
+=== RUN   TestIndependentEncodeGoldensAndRoundTrips/packet
+=== RUN   TestIndependentEncodeGoldensAndRoundTrips/wide
+=== RUN   TestIndependentEncodeGoldensAndRoundTrips/empty
+=== RUN   TestIndependentEncodeGoldensAndRoundTrips/stored
+--- PASS: TestIndependentEncodeGoldensAndRoundTrips (0.00s)
+    --- PASS: TestIndependentEncodeGoldensAndRoundTrips/packet (0.00s)
+    --- PASS: TestIndependentEncodeGoldensAndRoundTrips/wide (0.00s)
+    --- PASS: TestIndependentEncodeGoldensAndRoundTrips/empty (0.00s)
+    --- PASS: TestIndependentEncodeGoldensAndRoundTrips/stored (0.00s)
+=== RUN   TestEncodeAcceptanceVectors
+=== RUN   TestEncodeAcceptanceVectors/derived_count_edit
+=== RUN   TestEncodeAcceptanceVectors/derived_value_forbidden
+=== RUN   TestEncodeAcceptanceVectors/stored_count_mismatch
+--- PASS: TestEncodeAcceptanceVectors (0.00s)
+    --- PASS: TestEncodeAcceptanceVectors/derived_count_edit (0.00s)
+    --- PASS: TestEncodeAcceptanceVectors/derived_value_forbidden (0.00s)
+    --- PASS: TestEncodeAcceptanceVectors/stored_count_mismatch (0.00s)
+=== RUN   TestDocumentStrictJSON
+--- PASS: TestDocumentStrictJSON (0.00s)
+=== RUN   TestEncodeRejectsEditsBeforeWriting
+=== RUN   TestEncodeRejectsEditsBeforeWriting/derived_present
+=== RUN   TestEncodeRejectsEditsBeforeWriting/inactive_present
+=== RUN   TestEncodeRejectsEditsBeforeWriting/missing_active
+=== RUN   TestEncodeRejectsEditsBeforeWriting/null_active
+=== RUN   TestEncodeRejectsEditsBeforeWriting/unknown_field
+=== RUN   TestEncodeRejectsEditsBeforeWriting/numeric_integer
+=== RUN   TestEncodeRejectsEditsBeforeWriting/negative_zero
+=== RUN   TestEncodeRejectsEditsBeforeWriting/integer_overflow
+=== RUN   TestEncodeRejectsEditsBeforeWriting/negative_unsigned
+=== RUN   TestEncodeRejectsEditsBeforeWriting/integer_assertion
+=== RUN   TestEncodeRejectsEditsBeforeWriting/byte_assertion
+=== RUN   TestEncodeRejectsEditsBeforeWriting/uppercase_hex
+=== RUN   TestEncodeRejectsEditsBeforeWriting/odd_hex
+=== RUN   TestEncodeRejectsEditsBeforeWriting/invalid_hex
+=== RUN   TestEncodeRejectsEditsBeforeWriting/wrong_width
+=== RUN   TestEncodeRejectsEditsBeforeWriting/invalid_ASCII
+=== RUN   TestEncodeRejectsEditsBeforeWriting/invalid_UTF8
+=== RUN   TestEncodeRejectsEditsBeforeWriting/bad_element
+=== RUN   TestEncodeRejectsEditsBeforeWriting/array_null
+--- PASS: TestEncodeRejectsEditsBeforeWriting (0.01s)
+    --- PASS: TestEncodeRejectsEditsBeforeWriting/derived_present (0.00s)
+    --- PASS: TestEncodeRejectsEditsBeforeWriting/inactive_present (0.00s)
+    --- PASS: TestEncodeRejectsEditsBeforeWriting/missing_active (0.00s)
+    --- PASS: TestEncodeRejectsEditsBeforeWriting/null_active (0.00s)
+    --- PASS: TestEncodeRejectsEditsBeforeWriting/unknown_field (0.00s)
+    --- PASS: TestEncodeRejectsEditsBeforeWriting/numeric_integer (0.00s)
+    --- PASS: TestEncodeRejectsEditsBeforeWriting/negative_zero (0.00s)
+    --- PASS: TestEncodeRejectsEditsBeforeWriting/integer_overflow (0.00s)
+    --- PASS: TestEncodeRejectsEditsBeforeWriting/negative_unsigned (0.00s)
+    --- PASS: TestEncodeRejectsEditsBeforeWriting/integer_assertion (0.00s)
+    --- PASS: TestEncodeRejectsEditsBeforeWriting/byte_assertion (0.00s)
+    --- PASS: TestEncodeRejectsEditsBeforeWriting/uppercase_hex (0.00s)
+    --- PASS: TestEncodeRejectsEditsBeforeWriting/odd_hex (0.00s)
+    --- PASS: TestEncodeRejectsEditsBeforeWriting/invalid_hex (0.00s)
+    --- PASS: TestEncodeRejectsEditsBeforeWriting/wrong_width (0.00s)
+    --- PASS: TestEncodeRejectsEditsBeforeWriting/invalid_ASCII (0.00s)
+    --- PASS: TestEncodeRejectsEditsBeforeWriting/invalid_UTF8 (0.00s)
+    --- PASS: TestEncodeRejectsEditsBeforeWriting/bad_element (0.00s)
+    --- PASS: TestEncodeRejectsEditsBeforeWriting/array_null (0.00s)
+=== RUN   TestEncodeWriterErrorsAndCancellation
+--- PASS: TestEncodeWriterErrorsAndCancellation (0.00s)
+=== RUN   TestEncodeBudgets
+--- PASS: TestEncodeBudgets (0.00s)
+=== RUN   TestCountDimensionsAndNestedRoundTrip
+--- PASS: TestCountDimensionsAndNestedRoundTrip (0.00s)
+=== RUN   TestDerivedCountOverflowAndZero
+--- PASS: TestDerivedCountOverflowAndZero (0.00s)
+=== RUN   TestLoaderNestedDuplicatesNullsAndNumbers
+--- PASS: TestLoaderNestedDuplicatesNullsAndNumbers (0.00s)
+=== RUN   TestEncodePreciseDiagnosticPositions
+--- PASS: TestEncodePreciseDiagnosticPositions (0.00s)
+=== RUN   TestEncodeEscapeExpandedBudget
+--- PASS: TestEncodeEscapeExpandedBudget (0.00s)
+=== RUN   TestEncodeCancellationDuringTraversal
+--- PASS: TestEncodeCancellationDuringTraversal (0.00s)
+=== RUN   TestEncodeDynamicAndAggregateLimits
+--- PASS: TestEncodeDynamicAndAggregateLimits (0.00s)
 === RUN   TestFixtureIdentityAndDocumentShape
 === RUN   TestFixtureIdentityAndDocumentShape/packet
 === RUN   TestFixtureIdentityAndDocumentShape/wide
@@ -140,13 +218,21 @@ OK
     --- PASS: TestCompileAcceptanceVectors/null_schema_fields (0.00s)
     --- PASS: TestCompileAcceptanceVectors/unknown_condition_reference (0.00s)
 === RUN   TestDeclarationAndDepthBoundaries
---- PASS: TestDeclarationAndDepthBoundaries (0.03s)
+--- PASS: TestDeclarationAndDepthBoundaries (0.02s)
 === RUN   TestInvalidBindings
 --- PASS: TestInvalidBindings (0.00s)
 === RUN   FuzzDecodePacket
 === RUN   FuzzDecodePacket/seed#0
 --- PASS: FuzzDecodePacket (0.00s)
     --- PASS: FuzzDecodePacket/seed#0 (0.00s)
+=== RUN   FuzzLoadAndEncode
+=== RUN   FuzzLoadAndEncode/seed#0
+--- PASS: FuzzLoadAndEncode (0.00s)
+    --- PASS: FuzzLoadAndEncode/seed#0 (0.00s)
+=== RUN   FuzzLosslessPacket
+=== RUN   FuzzLosslessPacket/seed#0
+--- PASS: FuzzLosslessPacket (0.00s)
+    --- PASS: FuzzLosslessPacket/seed#0 (0.00s)
 === RUN   FuzzCompile
 === RUN   FuzzCompile/seed#0
 === RUN   FuzzCompile/seed#1
@@ -154,19 +240,55 @@ OK
     --- PASS: FuzzCompile/seed#0 (0.00s)
     --- PASS: FuzzCompile/seed#1 (0.00s)
 PASS
-ok  	github.com/softdevstudio/ebyte	1.078s
+ok  	github.com/softdevstudio/ebyte	1.094s
 === RUN   TestAvailableCommands
 --- PASS: TestAvailableCommands (0.00s)
 === RUN   TestUnavailableOperationsFailWithoutEcho
 --- PASS: TestUnavailableOperationsFailWithoutEcho (0.00s)
+=== RUN   TestPublishOutput
+--- PASS: TestPublishOutput (0.00s)
+=== RUN   TestPublicationFailuresLeaveNoDestination
+=== RUN   TestPublicationFailuresLeaveNoDestination/producer
+=== RUN   TestPublicationFailuresLeaveNoDestination/cancel
+=== RUN   TestPublicationFailuresLeaveNoDestination/closed-file
+--- PASS: TestPublicationFailuresLeaveNoDestination (0.00s)
+    --- PASS: TestPublicationFailuresLeaveNoDestination/producer (0.00s)
+    --- PASS: TestPublicationFailuresLeaveNoDestination/cancel (0.00s)
+    --- PASS: TestPublicationFailuresLeaveNoDestination/closed-file (0.00s)
+=== RUN   TestPublicationRefusesSymlinksAndDirectories
+=== RUN   TestPublicationRefusesSymlinksAndDirectories/symlink
+=== RUN   TestPublicationRefusesSymlinksAndDirectories/dangling
+=== RUN   TestPublicationRefusesSymlinksAndDirectories/directory
+--- PASS: TestPublicationRefusesSymlinksAndDirectories (0.00s)
+    --- PASS: TestPublicationRefusesSymlinksAndDirectories/symlink (0.00s)
+    --- PASS: TestPublicationRefusesSymlinksAndDirectories/dangling (0.00s)
+    --- PASS: TestPublicationRefusesSymlinksAndDirectories/directory (0.00s)
+=== RUN   TestDestinationCreatedDuringStaging
+--- PASS: TestDestinationCreatedDuringStaging (0.00s)
+=== RUN   TestPublicationPinsRenamedParent
+--- PASS: TestPublicationPinsRenamedParent (0.00s)
 PASS
-ok  	github.com/softdevstudio/ebyte/cmd/ebyte	1.013s
-fuzz: elapsed: 0s, gathering baseline coverage: 0/36 completed
-fuzz: elapsed: 0s, gathering baseline coverage: 36/36 completed, now fuzzing with 2 workers
-fuzz: elapsed: 3s, execs: 27852 (9284/sec), new interesting: 13 (total: 49)
-fuzz: elapsed: 6s, execs: 41735 (4627/sec), new interesting: 15 (total: 51)
-fuzz: elapsed: 6s, execs: 41735 (0/sec), new interesting: 15 (total: 51)
+ok  	github.com/softdevstudio/ebyte/cmd/ebyte	1.018s
+fuzz: elapsed: 0s, gathering baseline coverage: 0/51 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 51/51 completed, now fuzzing with 2 workers
+fuzz: elapsed: 3s, execs: 27139 (9045/sec), new interesting: 5 (total: 56)
+fuzz: elapsed: 6s, execs: 34868 (2576/sec), new interesting: 7 (total: 58)
+fuzz: elapsed: 6s, execs: 34868 (0/sec), new interesting: 7 (total: 58)
 PASS
-ok  	github.com/softdevstudio/ebyte	6.014s
+ok  	github.com/softdevstudio/ebyte	6.016s
+fuzz: elapsed: 0s, gathering baseline coverage: 0/102 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 102/102 completed, now fuzzing with 2 workers
+fuzz: elapsed: 3s, execs: 61562 (20515/sec), new interesting: 18 (total: 120)
+fuzz: elapsed: 6s, execs: 61562 (0/sec), new interesting: 18 (total: 120)
+fuzz: elapsed: 6s, execs: 61562 (0/sec), new interesting: 18 (total: 120)
+PASS
+ok  	github.com/softdevstudio/ebyte	6.015s
+fuzz: elapsed: 0s, gathering baseline coverage: 0/1 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 1/1 completed, now fuzzing with 2 workers
+fuzz: elapsed: 3s, execs: 41778 (13919/sec), new interesting: 39 (total: 40)
+fuzz: elapsed: 6s, execs: 41778 (0/sec), new interesting: 39 (total: 40)
+fuzz: elapsed: 6s, execs: 41778 (0/sec), new interesting: 39 (total: 40)
+PASS
+ok  	github.com/softdevstudio/ebyte	6.025s
 PASS: built CLI version/help, unavailable operations fail without touching files or echoing inputs
-PASS: formatting, vet, race, independent fixture/decoder oracles, bounded decoder fuzz, build and executable skeleton smoke
+PASS: formatting, vet, race, independent fixture/decoder oracles, bounded decoder/document/lossless fuzz, build and executable skeleton smoke

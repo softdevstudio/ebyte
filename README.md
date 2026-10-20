@@ -4,7 +4,7 @@ EByte is a binary schema engine being built in Go. Describe a format once, decod
 
 ## Current functionality
 
-This 0.0.0-dev build compiles bounded schemas and decodes binary input to editable values and field traces through the Go library. Only --version and --help work in the CLI. Encoding and operational CLI commands are not implemented. No executable release is available; license selection is pending. An unchanged byte-identical round trip is the implementation's acceptance target, not a current feature claim.
+This 0.0.0-dev build compiles bounded schemas, decodes binary input to editable values and field traces, and encodes validated documents through the Go library. Only --version and --help work in the CLI. Operational CLI commands are not implemented. No executable release is available; license selection is pending. Unchanged round trips are checked against independent byte fixtures and bounded fuzz tests.
 
 ```sh
 go build -o /tmp/ebyte ./cmd/ebyte
@@ -46,13 +46,32 @@ jsonBytes, err := json.Marshal(document)
 trace, err = plan.Inspect(ctx, anotherReader)
 ```
 
-Decode returns (*Document, *Trace, error); Inspect returns (*Trace, error). Both use the same traversal and enforce both editable-value and trace budgets. Values materialize in memory; Inspect currently constructs and discards those values too. Plans can be shared across concurrent calls with separate readers. Results belong to the caller and may be edited, but there is no encoder yet. Do not change a result concurrently with serialization.
+Decode returns (*Document, *Trace, error); Inspect returns (*Trace, error). Both use the same traversal and enforce both editable-value and trace budgets. Values materialize in memory; Inspect currently constructs and discards those values too. Plans can be shared across concurrent calls with separate readers. Results belong to the caller and may be edited before encoding. Do not change a result concurrently with serialization.
 
 Integers decode to decimal strings, byte fields to lowercase hex, and valid ASCII/UTF-8 strings retain embedded NUL and trailing spaces. Derived counts are omitted from editable values and observed in traces. Conditional fields that are absent have no value or trace entry. Limits cover binary bytes, field widths, array elements, independent value-node/trace-entry counts and the exact compact encoding/json byte sizes, including hex and escaping expansion. Pretty printing, added newlines or caller edits may increase serialized sizes beyond the checked compact result.
 
 A failure returns no editable document. Its trace marks affected ancestors failed and records only consumed bytes, keeping earlier completed siblings intact. Integer observations appear only after a full representation is read; raw byte/string content never appears in traces or diagnostics. If the failed trace envelope and diagnostic cannot fit the trace byte limit, the trace is nil and the diagnostic is still returned. Diagnostic stage is io for reader failures and decode for truncation, representation, limit or cancellation failures.
 
 Readers need no seeking. A field that exceeds the remaining input budget fails before reading that field. Successful decoding also checks for trailing data, consuming at most one extra byte; an extra probe byte at the input ceiling reports limit_exceeded. EOF with the last field's bytes requires no further read. A hundred consecutive zero-byte reads without an error report read_failed. Context cancellation is checked between reads and during traversal; it cannot interrupt a Reader blocked inside Read. Pass a non-nil context and a Reader obeying Go's io.Reader contract.
+
+## Library encoding
+
+```go
+document, err := plan.LoadDocument(ctx, documentJSON)
+if err != nil {
+    return err
+}
+// Edit document.Values using strings, map[string]any and []any.
+err = plan.Encode(ctx, document, writer)
+```
+
+LoadDocument(ctx, rawJSON) returns (*Document, error). It rejects unknown, duplicate, null and malformed members, invalid Unicode, noncanonical integer values and any schema identity mismatch. It also validates the complete values tree, including missing or inactive fields, assertions, widths and counts. Its raw JSON byte ceiling includes whitespace; the compact output size is checked independently. Array values use non-nil []any and object values use non-nil map[string]any. Empty arrays and objects are valid; nil represents null and fails.
+
+Encode(ctx, document, writer) returns error. It revalidates all values, so edits made after loading receive the same checks. Derived count values must be absent; the encoder calculates them from their bound arrays and checks the integer range. Stored counts must match the supplied arrays. Hex stays lowercase, strings retain their exact encoded width, and assertions validate rather than rewrite values. The encoder checks value nodes, compact document bytes, field/array ceilings and aggregate binary output bytes. Trace and input byte budgets apply to decoding, not encoding.
+
+The encoder prepares at most MaxOutputBytes of binary data before the first write. Any validation failure writes nothing. LoadDocument uses the same preparation to validate, then discards those bytes; Encode prepares them again so caller edits are checked. This is a bounded in-memory implementation, not a streaming encoder. Writer errors and short writes report write_failed; partial output may remain and must be discarded. Invalid writer counts have unknown (null) offsets. Cancellation after a write can return cancelled even if bytes have already been written. Context checks cannot interrupt a blocked Write. Known assertion and ASCII errors identify their position in the prepared binary; this does not mean those bytes reached the destination.
+
+The CLI's internal publication helper stages a private 0600 file in an opened parent directory, syncs and closes it, then creates a new hard link without replacing a destination. Tests cover existing files, symlinks, directories and destinations created during staging, producer/sync failures, cancellation and renamed parents. The helper is enabled only on native-tested Linux/macOS and fails on filesystems without hard-link support. The parent directory's entries must be trusted against hostile concurrent modification. This does not promise directory durability across power loss. If cleanup fails after linking, an error says the destination may already exist. Operational CLI commands will use this helper in the next session; it is not exposed as a library API.
 
 ## Contracts and fixtures
 

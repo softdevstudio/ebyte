@@ -18,7 +18,7 @@ func run(args []string, out, errOut io.Writer) int {
 			}
 			return 0
 		case "--help", "help":
-			if _, e := fmt.Fprintln(out, "EByte development build\nAvailable: --version, --help\nPlanned: validate-schema, decode, encode, inspect\nCodec operations are not implemented. No release is available. See README.md."); e != nil {
+			if _, e := fmt.Fprintln(out, "EByte development build\nAvailable: --version, --help\nPlanned: validate-schema, decode, encode, inspect\nCodec commands are not available yet. The Go library is documented in README.md. No release is available. See README.md."); e != nil {
 				return 1
 			}
 			return 0
