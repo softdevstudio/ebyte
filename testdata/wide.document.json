@@ -1,0 +1,10 @@
+{
+  "document_version": 1,
+  "schema_sha256": "181a25194c8f2ae52617928a1eedba370e58814c46f9472ca4f23e6cc17ffc08",
+  "values": {
+    "maximum": "18446744073709551615",
+    "minimum": "-9223372036854775808",
+    "text": "\u00e9\u0000 ",
+    "empty": ""
+  }
+}

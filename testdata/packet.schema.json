@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "name": "ebyte_packet",
+  "endian": "little",
+  "fields": [
+    {
+      "name": "magic",
+      "type": "bytes",
+      "length": 2,
+      "expect": "4542"
+    },
+    {
+      "name": "version",
+      "type": "u8",
+      "expect": "1"
+    },
+    {
+      "name": "record_count",
+      "type": "u8",
+      "derive": {
+        "count_of": "records"
+      }
+    },
+    {
+      "name": "flags",
+      "type": "u8"
+    },
+    {
+      "name": "label",
+      "type": "string",
+      "length": 4,
+      "encoding": "ascii"
+    },
+    {
+      "name": "reserved",
+      "type": "bytes",
+      "length": 2
+    },
+    {
+      "name": "records",
+      "type": "array",
+      "count": {
+        "field": "record_count"
+      },
+      "fields": [
+        {
+          "name": "id",
+          "type": "u16"
+        },
+        {
+          "name": "temperature",
+          "type": "i16"
+        }
+      ]
+    },
+    {
+      "name": "note",
+      "type": "bytes",
+      "length": 2,
+      "when": {
+        "field": "flags",
+        "equals": "1"
+      }
+    }
+  ]
+}

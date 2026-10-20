@@ -1,0 +1,120 @@
+{
+  "trace_version": 1,
+  "schema_sha256": "126bf06f961f7a814430197be73b292f5acfc28f32420c4aa87ea55abab96400",
+  "state": "complete",
+  "entries": [
+    {
+      "path": "",
+      "kind": "struct",
+      "offset": 0,
+      "length": 21,
+      "state": "complete"
+    },
+    {
+      "path": "/magic",
+      "kind": "bytes",
+      "offset": 0,
+      "length": 2,
+      "state": "complete"
+    },
+    {
+      "path": "/version",
+      "kind": "u8",
+      "offset": 2,
+      "length": 1,
+      "state": "complete",
+      "value": "1"
+    },
+    {
+      "path": "/record_count",
+      "kind": "u8",
+      "offset": 3,
+      "length": 1,
+      "state": "complete",
+      "value": "2"
+    },
+    {
+      "path": "/flags",
+      "kind": "u8",
+      "offset": 4,
+      "length": 1,
+      "state": "complete",
+      "value": "1"
+    },
+    {
+      "path": "/label",
+      "kind": "string",
+      "offset": 5,
+      "length": 4,
+      "state": "complete"
+    },
+    {
+      "path": "/reserved",
+      "kind": "bytes",
+      "offset": 9,
+      "length": 2,
+      "state": "complete"
+    },
+    {
+      "path": "/records",
+      "kind": "array",
+      "offset": 11,
+      "length": 8,
+      "state": "complete"
+    },
+    {
+      "path": "/records/0",
+      "kind": "struct",
+      "offset": 11,
+      "length": 4,
+      "state": "complete"
+    },
+    {
+      "path": "/records/0/id",
+      "kind": "u16",
+      "offset": 11,
+      "length": 2,
+      "state": "complete",
+      "value": "1"
+    },
+    {
+      "path": "/records/0/temperature",
+      "kind": "i16",
+      "offset": 13,
+      "length": 2,
+      "state": "complete",
+      "value": "-2"
+    },
+    {
+      "path": "/records/1",
+      "kind": "struct",
+      "offset": 15,
+      "length": 4,
+      "state": "complete"
+    },
+    {
+      "path": "/records/1/id",
+      "kind": "u16",
+      "offset": 15,
+      "length": 2,
+      "state": "complete",
+      "value": "2"
+    },
+    {
+      "path": "/records/1/temperature",
+      "kind": "i16",
+      "offset": 17,
+      "length": 2,
+      "state": "complete",
+      "value": "300"
+    },
+    {
+      "path": "/note",
+      "kind": "bytes",
+      "offset": 19,
+      "length": 2,
+      "state": "complete"
+    }
+  ],
+  "diagnostic": null
+}

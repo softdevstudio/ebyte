@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "name": "wide_scalars",
+  "endian": "big",
+  "fields": [
+    {
+      "name": "maximum",
+      "type": "u64"
+    },
+    {
+      "name": "minimum",
+      "type": "i64"
+    },
+    {
+      "name": "text",
+      "type": "string",
+      "length": 4,
+      "encoding": "utf8"
+    },
+    {
+      "name": "empty",
+      "type": "bytes",
+      "length": 0
+    }
+  ]
+}

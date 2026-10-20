@@ -1,0 +1,198 @@
+[
+  {
+    "name": "wrong magic",
+    "operation": "decode",
+    "schema": "packet",
+    "hex": "454301020141004220aa000100feff02002c01dead",
+    "error": {
+      "code": "constraint_mismatch",
+      "path": "/magic",
+      "offset": 1,
+      "field_start": 0
+    }
+  },
+  {
+    "name": "truncated note",
+    "operation": "decode",
+    "schema": "packet",
+    "hex": "454201020141004220aa000100feff02002c01de",
+    "error": {
+      "code": "truncated_input",
+      "path": "/note",
+      "offset": 20,
+      "field_start": 19
+    }
+  },
+  {
+    "name": "invalid ASCII",
+    "operation": "decode",
+    "schema": "packet",
+    "hex": "454201020141ff4220aa000100feff02002c01dead",
+    "error": {
+      "code": "invalid_encoding",
+      "path": "/label",
+      "offset": 6,
+      "field_start": 5
+    }
+  },
+  {
+    "name": "trailing byte",
+    "operation": "decode",
+    "schema": "packet",
+    "hex": "454201020141004220aa000100feff02002c01dead00",
+    "error": {
+      "code": "trailing_data",
+      "path": "",
+      "offset": 21,
+      "field_start": null
+    }
+  },
+  {
+    "name": "bounded array",
+    "operation": "decode",
+    "schema": "packet",
+    "hex": "454201020141004220aa000100feff02002c01dead",
+    "limits": {
+      "max_array_elements": 1
+    },
+    "error": {
+      "code": "limit_exceeded",
+      "path": "/records",
+      "offset": 11,
+      "field_start": 11
+    }
+  },
+  {
+    "name": "condition absent",
+    "operation": "decode",
+    "schema": "packet",
+    "hex": "454201020041004220aa000100feff02002c01",
+    "values": {
+      "magic": "4542",
+      "version": "1",
+      "flags": "0",
+      "label": "A\u0000B ",
+      "reserved": "aa00",
+      "records": [
+        {
+          "id": "1",
+          "temperature": "-2"
+        },
+        {
+          "id": "2",
+          "temperature": "300"
+        }
+      ]
+    }
+  },
+  {
+    "name": "derived count edit",
+    "operation": "encode",
+    "schema": "packet",
+    "values": {
+      "magic": "4542",
+      "version": "1",
+      "flags": "1",
+      "label": "A\u0000B ",
+      "reserved": "aa00",
+      "records": [
+        {
+          "id": "1",
+          "temperature": "-2"
+        },
+        {
+          "id": "2",
+          "temperature": "300"
+        },
+        {
+          "id": "3",
+          "temperature": "-1"
+        }
+      ],
+      "note": "dead"
+    },
+    "hex": "454201030141004220aa000100feff02002c010300ffffdead"
+  },
+  {
+    "name": "derived value forbidden",
+    "operation": "encode",
+    "schema": "packet",
+    "values": {
+      "magic": "4542",
+      "version": "1",
+      "flags": "1",
+      "label": "A\u0000B ",
+      "reserved": "aa00",
+      "records": [
+        {
+          "id": "1",
+          "temperature": "-2"
+        },
+        {
+          "id": "2",
+          "temperature": "300"
+        }
+      ],
+      "note": "dead",
+      "record_count": "2"
+    },
+    "error": {
+      "code": "invalid_document",
+      "path": "/record_count",
+      "offset": null,
+      "field_start": null
+    }
+  },
+  {
+    "name": "stored count mismatch",
+    "operation": "encode",
+    "schema": "stored",
+    "values": {
+      "count": "2",
+      "items": [
+        {
+          "value": "4660"
+        }
+      ]
+    },
+    "error": {
+      "code": "count_mismatch",
+      "path": "/items",
+      "offset": null,
+      "field_start": null
+    }
+  },
+  {
+    "name": "duplicate schema member",
+    "operation": "compile",
+    "schema_text": "{\"schema_version\":1,\"name\":\"x\",\"name\":\"y\",\"endian\":\"little\",\"fields\":[]}",
+    "error": {
+      "code": "invalid_schema",
+      "path": "/name",
+      "offset": null,
+      "field_start": null
+    }
+  },
+  {
+    "name": "null schema fields",
+    "operation": "compile",
+    "schema_text": "{\"schema_version\":1,\"name\":\"x\",\"endian\":\"little\",\"fields\":null}",
+    "error": {
+      "code": "invalid_schema",
+      "path": "/fields",
+      "offset": null,
+      "field_start": null
+    }
+  },
+  {
+    "name": "unknown condition reference",
+    "operation": "compile",
+    "schema_text": "{\"schema_version\":1,\"name\":\"x\",\"endian\":\"little\",\"fields\":[{\"name\":\"note\",\"type\":\"bytes\",\"length\":1,\"when\":{\"field\":\"absent\",\"equals\":\"1\"}}]}",
+    "error": {
+      "code": "invalid_schema",
+      "path": "/fields/0/when/field",
+      "offset": null,
+      "field_start": null
+    }
+  }
+]

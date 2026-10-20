@@ -1,0 +1,41 @@
+UTC: 2026-10-20T09:55:25Z
+go version go1.27.3 linux/amd64
+linux
+amd64
+1
+Source SHA256: fedbe955a45fa339f637e0b468255e1cd7f58bb14454bfbad63cab7632d9ccf1
+test_does_not_follow_links_inside_latest (test_results.LatestResultsTests.test_does_not_follow_links_inside_latest) ... ok
+test_rejects_files_without_removal (test_results.LatestResultsTests.test_rejects_files_without_removal) ... ok
+test_rejects_symlink_at_every_managed_component (test_results.LatestResultsTests.test_rejects_symlink_at_every_managed_component) ... ok
+test_replaces_latest_and_preserves_release_evidence (test_results.LatestResultsTests.test_replaces_latest_and_preserves_release_evidence) ... ok
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.005s
+
+OK
+=== RUN   TestFixtureIdentityAndDocumentShape
+=== RUN   TestFixtureIdentityAndDocumentShape/packet
+=== RUN   TestFixtureIdentityAndDocumentShape/wide
+=== RUN   TestFixtureIdentityAndDocumentShape/stored
+=== RUN   TestFixtureIdentityAndDocumentShape/empty
+--- PASS: TestFixtureIdentityAndDocumentShape (0.00s)
+    --- PASS: TestFixtureIdentityAndDocumentShape/packet (0.00s)
+    --- PASS: TestFixtureIdentityAndDocumentShape/wide (0.00s)
+    --- PASS: TestFixtureIdentityAndDocumentShape/stored (0.00s)
+    --- PASS: TestFixtureIdentityAndDocumentShape/empty (0.00s)
+=== RUN   TestPacketFixtureManualOracle
+--- PASS: TestPacketFixtureManualOracle (0.00s)
+=== RUN   TestWideAndEmptyManualOracle
+--- PASS: TestWideAndEmptyManualOracle (0.00s)
+=== RUN   TestAcceptanceVectorManualBoundaries
+--- PASS: TestAcceptanceVectorManualBoundaries (0.00s)
+PASS
+ok  	github.com/softdevstudio/ebyte	1.022s
+=== RUN   TestAvailableCommands
+--- PASS: TestAvailableCommands (0.00s)
+=== RUN   TestUnavailableOperationsFailWithoutEcho
+--- PASS: TestUnavailableOperationsFailWithoutEcho (0.00s)
+PASS
+ok  	github.com/softdevstudio/ebyte/cmd/ebyte	1.010s
+PASS: built CLI version/help, unavailable operations fail without touching files or echoing inputs
+PASS: formatting, vet, race, independent fixture oracles, build and executable skeleton smoke

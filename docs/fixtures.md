@@ -1,0 +1,9 @@
+# Independent format fixtures
+
+The fixtures are written from the contract before the interpreter exists. Hex files are plain lowercase hex plus a newline, so source control/API review can inspect exact bytes without an opaque binary blob. They are examples, not executable schema validation. Session one's tests check their manual oracle and identities; later parser/codec sessions must consume these vectors as acceptance tests rather than generating expected data with the implementation under test.
+
+packet is a 21-byte little-endian file. Its layout is magic [0,2), version [2,3), derived record_count [3,4), flags [4,5), label [5,9), reserved [9,11), records [11,19) and conditional note [19,21). Label is A, NUL, B, space; reserved is aa00. Record zero contains id 1 and temperature -2; record one contains id 2 and temperature 300. flags equals 1, so note dead is present. record_count is observed as 2 in the trace and absent from editable values. packet.trace.json is the complete deterministic preorder trace; raw byte/string values are deliberately absent.
+
+wide exercises big-endian maximum u64, minimum i64, a four-byte UTF-8 string (e-acute, NUL, space) and an empty byte field. empty has an empty root and no bytes. stored exercises a supplied count instead of a derived one. Every document's identity is the exact matching schema file's SHA-256, including its newline.
+
+cases.json contains valid conditional absence and a derived-count array edit, plus wrong magic, truncation, invalid ASCII, trailing input, array budget, forbidden derived value, stored-count disagreement and malformed/invalid schemas. Null offsets mean binary positions are unknown, not byte zero. The third-record edit inserts id 3 and temperature -1, updates count to 3 and shifts note to byte 23. A flags edit to zero must remove note from values; leaving an inactive field is an invalid_document error.

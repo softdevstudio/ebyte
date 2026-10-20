@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "name": "stored_count",
+  "endian": "little",
+  "fields": [
+    {
+      "name": "count",
+      "type": "u8"
+    },
+    {
+      "name": "items",
+      "type": "array",
+      "count": {
+        "field": "count"
+      },
+      "fields": [
+        {
+          "name": "value",
+          "type": "u16"
+        }
+      ]
+    }
+  ]
+}

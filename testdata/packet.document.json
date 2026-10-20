@@ -1,0 +1,22 @@
+{
+  "document_version": 1,
+  "schema_sha256": "126bf06f961f7a814430197be73b292f5acfc28f32420c4aa87ea55abab96400",
+  "values": {
+    "magic": "4542",
+    "version": "1",
+    "flags": "1",
+    "label": "A\u0000B ",
+    "reserved": "aa00",
+    "records": [
+      {
+        "id": "1",
+        "temperature": "-2"
+      },
+      {
+        "id": "2",
+        "temperature": "300"
+      }
+    ],
+    "note": "dead"
+  }
+}
