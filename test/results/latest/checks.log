@@ -1,16 +1,16 @@
-UTC: 2026-10-20T09:55:25Z
+UTC: 2026-10-20T10:05:36Z
 go version go1.27.3 linux/amd64
 linux
 amd64
 1
-Source SHA256: fedbe955a45fa339f637e0b468255e1cd7f58bb14454bfbad63cab7632d9ccf1
+Source SHA256: d26f1859b3d422882e0e8f08fd8a95c748d33f94631c3aae5f439759e4223d3a
 test_does_not_follow_links_inside_latest (test_results.LatestResultsTests.test_does_not_follow_links_inside_latest) ... ok
 test_rejects_files_without_removal (test_results.LatestResultsTests.test_rejects_files_without_removal) ... ok
 test_rejects_symlink_at_every_managed_component (test_results.LatestResultsTests.test_rejects_symlink_at_every_managed_component) ... ok
 test_replaces_latest_and_preserves_release_evidence (test_results.LatestResultsTests.test_replaces_latest_and_preserves_release_evidence) ... ok
 
 ----------------------------------------------------------------------
-Ran 4 tests in 0.005s
+Ran 4 tests in 0.003s
 
 OK
 === RUN   TestFixtureIdentityAndDocumentShape
@@ -29,13 +29,71 @@ OK
 --- PASS: TestWideAndEmptyManualOracle (0.00s)
 === RUN   TestAcceptanceVectorManualBoundaries
 --- PASS: TestAcceptanceVectorManualBoundaries (0.00s)
+=== RUN   TestCompileGolden
+=== RUN   TestCompileGolden/packet
+=== RUN   TestCompileGolden/wide
+=== RUN   TestCompileGolden/empty
+=== RUN   TestCompileGolden/stored
+--- PASS: TestCompileGolden (0.00s)
+    --- PASS: TestCompileGolden/packet (0.00s)
+    --- PASS: TestCompileGolden/wide (0.00s)
+    --- PASS: TestCompileGolden/empty (0.00s)
+    --- PASS: TestCompileGolden/stored (0.00s)
+=== RUN   TestCompileReject
+=== RUN   TestCompileReject/unknown
+=== RUN   TestCompileReject/conditional_source
+=== RUN   TestCompileReject/parent_source
+=== RUN   TestCompileReject/fraction
+=== RUN   TestCompileReject/exponent
+=== RUN   TestCompileReject/negative_zero
+=== RUN   TestCompileReject/overflow
+=== RUN   TestCompileReject/dynamic_assertion
+=== RUN   TestCompileReject/derived_reuse
+=== RUN   TestCompileReject/signed_derived
+=== RUN   TestCompileReject/duplicate_names
+--- PASS: TestCompileReject (0.00s)
+    --- PASS: TestCompileReject/unknown (0.00s)
+    --- PASS: TestCompileReject/conditional_source (0.00s)
+    --- PASS: TestCompileReject/parent_source (0.00s)
+    --- PASS: TestCompileReject/fraction (0.00s)
+    --- PASS: TestCompileReject/exponent (0.00s)
+    --- PASS: TestCompileReject/negative_zero (0.00s)
+    --- PASS: TestCompileReject/overflow (0.00s)
+    --- PASS: TestCompileReject/dynamic_assertion (0.00s)
+    --- PASS: TestCompileReject/derived_reuse (0.00s)
+    --- PASS: TestCompileReject/signed_derived (0.00s)
+    --- PASS: TestCompileReject/duplicate_names (0.00s)
+=== RUN   TestStrictJSON
+--- PASS: TestStrictJSON (0.00s)
+=== RUN   TestCompileLimits
+--- PASS: TestCompileLimits (0.00s)
+=== RUN   TestResolvedPlan
+--- PASS: TestResolvedPlan (0.00s)
+=== RUN   TestCompileAcceptanceVectors
+=== RUN   TestCompileAcceptanceVectors/duplicate_schema_member
+=== RUN   TestCompileAcceptanceVectors/null_schema_fields
+=== RUN   TestCompileAcceptanceVectors/unknown_condition_reference
+--- PASS: TestCompileAcceptanceVectors (0.00s)
+    --- PASS: TestCompileAcceptanceVectors/duplicate_schema_member (0.00s)
+    --- PASS: TestCompileAcceptanceVectors/null_schema_fields (0.00s)
+    --- PASS: TestCompileAcceptanceVectors/unknown_condition_reference (0.00s)
+=== RUN   TestDeclarationAndDepthBoundaries
+--- PASS: TestDeclarationAndDepthBoundaries (0.02s)
+=== RUN   TestInvalidBindings
+--- PASS: TestInvalidBindings (0.00s)
+=== RUN   FuzzCompile
+=== RUN   FuzzCompile/seed#0
+=== RUN   FuzzCompile/seed#1
+--- PASS: FuzzCompile (0.00s)
+    --- PASS: FuzzCompile/seed#0 (0.00s)
+    --- PASS: FuzzCompile/seed#1 (0.00s)
 PASS
-ok  	github.com/softdevstudio/ebyte	1.022s
+ok  	github.com/softdevstudio/ebyte	1.043s
 === RUN   TestAvailableCommands
 --- PASS: TestAvailableCommands (0.00s)
 === RUN   TestUnavailableOperationsFailWithoutEcho
 --- PASS: TestUnavailableOperationsFailWithoutEcho (0.00s)
 PASS
-ok  	github.com/softdevstudio/ebyte/cmd/ebyte	1.010s
+ok  	github.com/softdevstudio/ebyte/cmd/ebyte	1.011s
 PASS: built CLI version/help, unavailable operations fail without touching files or echoing inputs
 PASS: formatting, vet, race, independent fixture oracles, build and executable skeleton smoke

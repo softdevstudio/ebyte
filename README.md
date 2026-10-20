@@ -4,7 +4,7 @@ EByte is a binary schema engine being built in Go. Describe a format once, decod
 
 ## Current functionality
 
-This is session one's 0.0.0-dev skeleton. Only --version and --help work. Schema compilation, decoding, encoding and field inspection are not implemented. No executable release is available; license selection is pending. An unchanged byte-identical round trip is the implementation's acceptance target, not a current feature claim.
+This 0.0.0-dev build compiles strict, bounded schemas through the Go library. Only --version and --help work in the CLI. Decoding, encoding and field inspection are not implemented. No executable release is available; license selection is pending. An unchanged byte-identical round trip is the implementation's acceptance target, not a current feature claim.
 
 ```sh
 go build -o /tmp/ebyte ./cmd/ebyte
@@ -14,6 +14,23 @@ bash scripts/record-results.sh
 ```
 
 The command refuses unavailable operations without opening input/output paths or echoing arguments. Planned commands are validate-schema, decode, encode and inspect. Their options will be specified when the shared interpreter exists.
+
+## Library schema compilation
+
+```go
+limits := ebyte.DefaultLimits()
+limits.MaxSchemaBytes = 64 * 1024
+plan, err := ebyte.Compile(schemaBytes, limits)
+if err != nil {
+    // A *ebyte.Diagnostic contains the schema property path and stable code.
+    return err
+}
+fmt.Println(plan.Name(), plan.SchemaSHA256())
+```
+
+Import github.com/softdevstudio/ebyte. Compile copies validated strings into an immutable plan and retains no caller buffer. Its SHA-256 identifies the exact validated bytes, including whitespace. Limits returns a copy of the plan's ceilings. Start with DefaultLimits and lower individual ceilings; zero is a real limit, and negative or above-default settings fail with limit_exceeded. Binary read/write ceilings are retained for future execution, rather than checked against speculative runtime sizes during compilation.
+
+Compilation rejects unknown, duplicate or null members, invalid UTF-8 and unpaired Unicode escapes, noncanonical dimensions, invalid assertions and unsafe references. Same-object references resolve only to earlier unconditional integers. A derived unsigned count binds to one later unconditional array and cannot drive another dimension. Diagnostics use schema-stage JSON property paths and null binary offsets; unknown member names are omitted from paths to avoid reflecting arbitrary input. Schema input is bounded before JSON parsing, JSON nesting has an additional safety ceiling of 40, and declarations/array scope depth and literal dimensions are checked before compiled-plan allocation. The schema byte ceiling also bounds the temporary JSON tree; this is not a streaming or constant-memory compiler.
 
 ## Contracts and fixtures
 
