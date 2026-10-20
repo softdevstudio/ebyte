@@ -517,7 +517,7 @@ func (e *encoder) repeat(f field, v any, path string) error {
 			return err
 		}
 		if len(e.out) == before {
-			d := encodeFailure("value_out_of_range", child).(*Diagnostic)
+			d := encodeFailure("constraint_mismatch", child).(*Diagnostic)
 			d.Expected, d.Observed = "repeat element encodes at least one byte", "empty repeat element"
 			return d
 		}

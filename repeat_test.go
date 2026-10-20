@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"io"
 	"os"
 	"reflect"
 	"strconv"
@@ -225,7 +226,7 @@ func TestRepeatEncodeFailuresAndEdits(t *testing.T) {
 	empty := repeatPlan(t, `{"schema_version":1,"name":"e","endian":"little","fields":[
 {"name":"items","type":"repeat","until":"end_of_input","fields":[{"name":"body","type":"bytes","length":0}]}]}`, DefaultLimits())
 	e = empty.Encode(context.Background(), &Document{DocumentVersion: 1, SchemaSHA256: empty.SchemaSHA256(), Values: map[string]any{"items": []any{map[string]any{"body": ""}}}}, &out)
-	if got := at(diagnosticOf(t, e)); got != "value_out_of_range /items/0 null null" {
+	if got := at(diagnosticOf(t, e)); got != "constraint_mismatch /items/0 null null" {
 		t.Fatalf("empty element: %q", got)
 	}
 
@@ -358,4 +359,48 @@ func TestRepeatLibrarySamples(t *testing.T) {
 	if got := list("zip.schema.json", "three.zip", "central_directory", "name"); !reflect.DeepEqual(got, names) {
 		t.Fatalf("zip directory %q", got)
 	}
+}
+
+type unexpectedEOFReader struct{ data []byte }
+
+func (r *unexpectedEOFReader) Read(p []byte) (int, error) {
+	if len(r.data) == 0 {
+		return 0, io.ErrUnexpectedEOF
+	}
+	n := copy(p, r.data)
+	r.data = r.data[n:]
+	return n, nil
+}
+
+// A reader's unexpected EOF met while looking ahead is truncation, as it is
+// for every other read, and look-ahead stops one byte past the input ceiling.
+func TestRepeatLookAheadEdges(t *testing.T) {
+	chunks := repeatPlan(t, chunkSchema, DefaultLimits())
+	_, _, e := chunks.Decode(context.Background(), &unexpectedEOFReader{unhex(t, "4348 0102aabb")})
+	if got := at(diagnosticOf(t, e)); got != "truncated_input /chunks 6 2" {
+		t.Fatalf("unexpected EOF: %q", got)
+	}
+	small := DefaultLimits()
+	small.MaxInputBytes = 5
+	tagged := repeatPlan(t, `{"schema_version":1,"name":"t","endian":"little","fields":[
+{"name":"entries","type":"repeat","until":"tag_mismatch","fields":[{"name":"tag","type":"bytes","length":4,"expect":"52455045"},{"name":"v","type":"u8"}]}]}`, small)
+	counted := &countingReader{r: bytes.NewReader(unhex(t, "52455045 01 52455045 02"))}
+	_, _, e = tagged.Decode(context.Background(), counted)
+	if got := at(diagnosticOf(t, e)); got != "limit_exceeded  5 null" {
+		t.Fatalf("ceiling: %q", got)
+	}
+	if counted.n > 6 {
+		t.Fatalf("read %d bytes with a 5-byte ceiling", counted.n)
+	}
+}
+
+type countingReader struct {
+	r *bytes.Reader
+	n int
+}
+
+func (c *countingReader) Read(p []byte) (int, error) {
+	n, e := c.r.Read(p)
+	c.n += n
+	return n, e
 }

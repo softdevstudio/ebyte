@@ -461,6 +461,10 @@ func (d *decoder) read(n int, path string, start int64) ([]byte, error) {
 // bytes means the input ends first. Peeked bytes stay in d.pending and are
 // served to the next read, so offsets and traces are unaffected.
 func (d *decoder) peek(n int, path string, start int64) ([]byte, error) {
+	// Never look further than one byte past the input ceiling, like probe.
+	if room := int64(d.plan.limits.MaxInputBytes) + 1 - d.pos; int64(n) > room {
+		n = int(room)
+	}
 	empty := 0
 	for len(d.pending) < n && !d.eof {
 		if e := d.cancel(path, &start); e != nil {
@@ -472,7 +476,10 @@ func (d *decoder) peek(n int, path string, start int64) ([]byte, error) {
 			return nil, d.diagnostic("read_failed", path, &start, d.pos, "valid reader result", "invalid reader count")
 		}
 		d.pending = append(d.pending, buf[:got]...)
-		if e == io.EOF || e == io.ErrUnexpectedEOF {
+		if e == io.ErrUnexpectedEOF {
+			return nil, d.diagnostic("truncated_input", path, &start, d.pos+int64(len(d.pending)), "end of input", "unexpected EOF")
+		}
+		if e == io.EOF {
 			d.eof = true
 		} else if e != nil {
 			return nil, d.diagnostic("read_failed", path, &start, d.pos, "readable input", "reader error")
@@ -493,7 +500,7 @@ func (d *decoder) peek(n int, path string, start int64) ([]byte, error) {
 }
 func (d *decoder) probe() error {
 	if len(d.pending) > 0 {
-		if d.pos >= int64(d.plan.limits.MaxInputBytes) {
+		if d.pos+int64(len(d.pending)) > int64(d.plan.limits.MaxInputBytes) {
 			return d.limit("", nil)
 		}
 		return d.diagnostic("trailing_data", "", nil, d.pos, "end of input", "additional byte")
