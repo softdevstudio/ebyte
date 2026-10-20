@@ -62,7 +62,29 @@ class ReleaseSafetyTests(unittest.TestCase):
         self.assertEqual(outcome['tag_needs_investigation'], 'v0.1.0')
         self.assertIn('cleanup_error_type', outcome)
 
-    def publish_case(self, failure):
+    def test_leftover_draft_blocks_a_second_publication(self):
+        draft = {'id': 7, 'draft': True, 'tag_name': 'v0.1.0', 'name': 'EByte v0.1.0'}
+        outcome, calls = self.publish_case('none', [draft])
+        self.assertNotIn(('POST', '/releases'), calls)
+        self.assertEqual(outcome['verification'], 'failed')
+        self.assertFalse(any(method == 'DELETE' for method, _ in calls))
+        self.assertNotIn('failed_draft_deleted', outcome)
+
+    def test_releases_for_finds_untagged_drafts_and_pages(self):
+        pages = {1: [{'tag_name': 'v0.0.9', 'name': 'EByte v0.0.9'}] * 100,
+                 2: [{'tag_name': 'untagged-1a2b', 'name': 'EByte v0.1.1', 'draft': True}]}
+        seen = []
+
+        def fetch(path):
+            seen.append(path)
+            return pages.get(int(path.rsplit('=', 1)[1]), [])
+        found = release_common.releases_for('0.1.1', fetch)
+        self.assertEqual(len(found), 1)
+        self.assertEqual(len(seen), 2)
+        self.assertEqual(release_common.releases_for('0.2.0', fetch), [])
+
+    def publish_case(self, failure, listing=()):
+        listing = list(listing)
         script = Path(__file__).resolve().parent / 'publish_release.py'
         sha = 'a' * 40
         calls = []
@@ -74,6 +96,8 @@ class ReleaseSafetyTests(unittest.TestCase):
                 return {'object': {'sha': sha}}
             if path == '/releases/tags/v0.1.0':
                 return None
+            if path.startswith('/releases?') and method == 'GET':
+                return listing if path.endswith('page=1') else []
             if path == '/git/ref/tags/v0.1.0':
                 return {'object': {'type': 'commit', 'sha': sha}} if state['created'] else None
             if path == '/releases' and method == 'POST':

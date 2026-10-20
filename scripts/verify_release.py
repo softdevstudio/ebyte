@@ -2,6 +2,7 @@
 """Download every tag/latest asset, check hashes and run a downloaded native CLI."""
 import hashlib
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -11,10 +12,13 @@ from release_common import ASSETS, REPO, api, request, unpack
 
 
 def verify(version, revision, output):
+    # Authenticated API reads avoid anonymous rate limits on shared runners;
+    # asset downloads stay anonymous so they match what users actually get.
+    authenticated = bool(os.environ.get('GH_TOKEN'))
     root = Path(__file__).resolve().parents[1]
     expected_name = 'EByte v' + version
     tag = 'v' + version
-    ref = api('/git/ref/tags/' + tag, auth=False)
+    ref = api('/git/ref/tags/' + tag, auth=authenticated)
     assert ref['object']['type'] == 'commit' and ref['object']['sha'] == revision
     evidence = {'version': version, 'source_sha': revision, 'endpoints': {}, 'downloaded_native_smoke': None}
     with tempfile.TemporaryDirectory() as temporary:
@@ -23,7 +27,7 @@ def verify(version, revision, output):
         checksums = None
         manifest = None
         for endpoint in ('tags/' + tag, 'latest'):
-            release = api('/releases/' + endpoint, auth=False)
+            release = api('/releases/' + endpoint, auth=authenticated)
             assert release['name'] == expected_name and release['tag_name'] == tag
             assert not release['draft'] and not release['prerelease']
             assets = {item['name']: item for item in release['assets']}

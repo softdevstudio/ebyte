@@ -34,6 +34,7 @@ func publicationCancelled(ctx context.Context) error {
 // its entries. Directory renames are pinned by os.Root rather than followed.
 type publicationOps struct {
 	create func(*os.Root, string) (*os.File, error)
+	chmod  func(*os.File, os.FileMode) error
 	sync   func(*os.File) error
 	close  func(*os.File) error
 	link   func(*os.Root, string, string) error
@@ -45,12 +46,28 @@ func nativePublicationOps() publicationOps {
 		create: func(root *os.Root, name string) (*os.File, error) {
 			return root.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
 		},
+		chmod:  func(file *os.File, mode os.FileMode) error { return file.Chmod(mode) },
 		sync:   func(file *os.File) error { return file.Sync() },
 		close:  func(file *os.File) error { return file.Close() },
 		link:   func(root *os.Root, old, new string) error { return root.Link(old, new) },
 		remove: func(root *os.Root, name string) error { return root.Remove(name) },
 	}
 }
+
+// outputFileMode is the mode a published file ends up with: 0666 minus the
+// umask, set in main. The staging file stays 0600 until it's complete.
+var outputFileMode os.FileMode = 0644
+
+// validDestination rejects names that point at a directory rather than a new
+// file, such as "out/", ".", ".." or "/", so they can't quietly become out/out.
+func validDestination(destination string) bool {
+	if destination == "" || os.IsPathSeparator(destination[len(destination)-1]) {
+		return false
+	}
+	name := filepath.Base(destination)
+	return name != "." && name != ".." && !os.IsPathSeparator(name[0])
+}
+
 func publishOutput(ctx context.Context, destination string, produce func(io.Writer) error) error {
 	return publishOutputWith(ctx, destination, produce, nativePublicationOps())
 }
@@ -62,6 +79,9 @@ func publishOutputWith(ctx context.Context, destination string, produce func(io.
 	}
 	if runtime.GOOS != "linux" && runtime.GOOS != "darwin" {
 		return publicationFailure("write_failed", false)
+	}
+	if !validDestination(destination) {
+		return &ebyte.Diagnostic{DiagnosticVersion: 1, Stage: "io", Code: "write_failed", Expected: "complete output at a new destination", Observed: "destination is not a file name"}
 	}
 	root, e := os.OpenRoot(filepath.Dir(destination))
 	if e != nil {
@@ -109,6 +129,9 @@ func publishOutputWith(ctx context.Context, destination string, produce func(io.
 	}
 	if e = publicationCancelled(ctx); e != nil {
 		return e
+	}
+	if e = ops.chmod(file, outputFileMode); e != nil {
+		return publicationFailure("write_failed", false)
 	}
 	if e = ops.sync(file); e != nil {
 		return publicationFailure("write_failed", false)

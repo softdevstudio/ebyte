@@ -39,7 +39,7 @@ func TestPublishOutput(t *testing.T) {
 		t.Fatal("publication")
 	}
 	info, e := os.Stat(path)
-	if e != nil || info.Mode().Perm() != 0600 {
+	if e != nil || info.Mode().Perm() != outputFileMode {
 		t.Fatal("output permissions")
 	}
 	assertNoTemporary(t, dir)
@@ -176,7 +176,7 @@ func TestPublicationPinsRenamedParent(t *testing.T) {
 
 func TestInjectedPublicationFailures(t *testing.T) {
 	supportedPublication(t)
-	for _, stage := range []string{"create", "sync", "close", "link", "cleanup-before-link", "cleanup-after-link", "cancel-after-sync"} {
+	for _, stage := range []string{"create", "chmod", "sync", "close", "link", "cleanup-before-link", "cleanup-after-link", "cancel-after-sync"} {
 		t.Run(stage, func(t *testing.T) {
 			dir := t.TempDir()
 			path := filepath.Join(dir, "result")
@@ -193,6 +193,9 @@ func TestInjectedPublicationFailures(t *testing.T) {
 					return nil, fault
 				}
 				return originalCreate(root, name)
+			}
+			if stage == "chmod" {
+				ops.chmod = func(*os.File, os.FileMode) error { return fault }
 			}
 			if stage == "sync" {
 				ops.sync = func(*os.File) error { return fault }
@@ -268,5 +271,50 @@ func TestInjectedPublicationFailures(t *testing.T) {
 			}
 			assertNoTemporary(t, dir)
 		})
+	}
+}
+
+func TestPublicationRejectsDirectoryStyleDestinations(t *testing.T) {
+	supportedPublication(t)
+	dir := t.TempDir()
+	sub := filepath.Join(dir, "out")
+	if e := os.Mkdir(sub, 0700); e != nil {
+		t.Fatal(e)
+	}
+	for _, destination := range []string{sub + string(os.PathSeparator), sub + "/", sub + "/.", sub + "/..", "/", ""} {
+		called := false
+		err := publishOutput(context.Background(), destination, func(w io.Writer) error { called = true; return nil })
+		d, ok := err.(*ebyte.Diagnostic)
+		if !ok || d.Code != "write_failed" || called {
+			t.Fatalf("%q: %#v", destination, err)
+		}
+	}
+	entries, e := os.ReadDir(sub)
+	if e != nil || len(entries) != 0 {
+		t.Fatalf("directory destination created files: %v %v", entries, e)
+	}
+	assertNoTemporary(t, dir)
+}
+func TestPublishedFileUsesOutputMode(t *testing.T) {
+	supportedPublication(t)
+	original := outputFileMode
+	defer func() { outputFileMode = original }()
+	for _, mode := range []os.FileMode{0644, 0640, 0600} {
+		outputFileMode = mode
+		path := filepath.Join(t.TempDir(), "result")
+		if e := publishOutput(context.Background(), path, func(w io.Writer) error { _, e := w.Write([]byte("x")); return e }); e != nil {
+			t.Fatal(e)
+		}
+		info, e := os.Stat(path)
+		if e != nil || info.Mode().Perm() != mode {
+			t.Fatalf("mode %v, want %v (%v)", info.Mode().Perm(), mode, e)
+		}
+	}
+}
+func TestDefaultOutputModeFollowsUmask(t *testing.T) {
+	supportedPublication(t)
+	mode := defaultOutputMode()
+	if mode&^0666 != 0 || mode&0600 != 0600 {
+		t.Fatalf("unexpected default output mode %v", mode)
 	}
 }

@@ -583,3 +583,12 @@ func TestConditionalZeroWidthNodeCeilings(t *testing.T) {
 		}
 	}
 }
+
+func TestDiagnosticFieldStartDoesNotAliasDecoder(t *testing.T) {
+	d := &decoder{pos: 15}
+	err := d.diagnostic("truncated_input", "/x", &d.pos, d.pos, "2 bytes", "1 bytes").(*Diagnostic)
+	d.pos = 99
+	if err.FieldStart == nil || *err.FieldStart != 15 || err.FieldStart == &d.pos {
+		t.Fatalf("field start aliases decoder state: %v", err.FieldStart)
+	}
+}

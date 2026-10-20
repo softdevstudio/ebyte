@@ -6,7 +6,7 @@ from pathlib import Path
 import sys
 import urllib.parse
 
-from release_common import ASSETS, api, request
+from release_common import ASSETS, api, releases_for, request
 from verify_release import verify
 
 version, revision = sys.argv[1:3]
@@ -17,6 +17,11 @@ assert api('/releases/tags/' + tag, missing=True) is None
 assert api('/git/ref/tags/' + tag, missing=True) is None
 release = None
 try:
+    leftovers = releases_for(version)
+    if leftovers:
+        # A draft from a failed cleanup has no tag yet, so only the listing shows it.
+        raise RuntimeError('a release or leftover draft already claims this version: ' +
+                           ', '.join(str(item.get('id')) for item in leftovers))
     release = api('/releases', 'POST', {'tag_name': tag, 'target_commitish': revision,
                   'name': 'EByte v' + version, 'body': (dist / 'release-notes.md').read_text(),
                   'draft': True, 'prerelease': False})

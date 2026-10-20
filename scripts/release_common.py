@@ -61,3 +61,22 @@ def unpack(archive, destination):
             for item in packed.getmembers():
                 assert safe(item.name) and (item.isfile() or item.isdir())
             packed.extractall(destination, filter='data')
+
+
+def releases_for(version, fetch=None, max_pages=10):
+    """Every release, drafts included, that claims this version by tag or title.
+
+    /releases/tags/{tag} ignores drafts, because a draft has no tag yet, so a
+    draft left behind by a failed cleanup is only visible in the full listing.
+    """
+    fetch = fetch or api
+    tag, title = 'v' + version, 'EByte v' + version
+    found = []
+    for page in range(1, max_pages + 1):
+        batch = fetch('/releases?per_page=100&page=' + str(page))
+        if not batch:
+            return found
+        found.extend(item for item in batch if item.get('tag_name') == tag or item.get('name') == title)
+        if len(batch) < 100:
+            return found
+    raise RuntimeError('release listing longer than expected; refusing to guess')

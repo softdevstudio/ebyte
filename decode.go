@@ -92,7 +92,13 @@ func (d *decoder) diagnostic(code, path string, start *int64, offset int64, expe
 	if code == "read_failed" {
 		stage = "io"
 	}
-	return &Diagnostic{DiagnosticVersion: 1, Stage: stage, Code: code, Path: path, Offset: &offset, FieldStart: start, Expected: expected, Observed: observed}
+	// Copy the start position so a returned diagnostic never aliases decoder state.
+	var fieldStart *int64
+	if start != nil {
+		value := *start
+		fieldStart = &value
+	}
+	return &Diagnostic{DiagnosticVersion: 1, Stage: stage, Code: code, Path: path, Offset: &offset, FieldStart: fieldStart, Expected: expected, Observed: observed}
 }
 func (d *decoder) limit(path string, start *int64) error {
 	return d.diagnostic("limit_exceeded", path, start, d.pos, "within configured resource ceilings", "resource ceiling exceeded")

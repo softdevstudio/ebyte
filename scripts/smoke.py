@@ -68,46 +68,47 @@ if sys.platform in ('linux', 'darwin'):
         assert process.returncode == 1, (process.returncode, diagnostic)
         assert json.loads(diagnostic)['code'] == 'write_failed'
 
-    with tempfile.TemporaryDirectory() as directory:
-        fifo = Path(directory) / 'schema.fifo'
-        os.mkfifo(fifo)
-        process = subprocess.Popen([binary, 'decode', '--schema', str(fifo), '--input=-'],
-                                   stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        try:
-            deadline = time.monotonic() + 10
-            # The open handshake proves signal handlers were installed before signalling.
-            while True:
-                try:
-                    schema_fd = os.open(fifo, os.O_WRONLY | os.O_NONBLOCK)
-                    break
-                except OSError as error:
-                    if error.errno != errno.ENXIO or time.monotonic() >= deadline:
-                        raise
-                    time.sleep(0.01)
+    for cancel_signal in (signal.SIGINT, signal.SIGTERM):
+        with tempfile.TemporaryDirectory() as directory:
+            fifo = Path(directory) / 'schema.fifo'
+            os.mkfifo(fifo)
+            process = subprocess.Popen([binary, 'decode', '--schema', str(fifo), '--input=-'],
+                                       stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             try:
-                os.write(schema_fd, (root / 'testdata/packet.schema.json').read_bytes())
-            finally:
-                os.close(schema_fd)
-            process.stdin.write(original[:1])
-            process.stdin.flush()
-            while True:
-                available = array.array('i', [0])
-                fcntl.ioctl(process.stdin.fileno(), termios.FIONREAD, available, True)
-                if available[0] == 0:
-                    break
-                assert process.poll() is None and time.monotonic() < deadline
-                time.sleep(0.01)
-            time.sleep(0.05)
-            process.send_signal(signal.SIGINT)
-            # Keep stdin open: EOF would conceal a cancellation hang.
-            process.wait(timeout=5)
-            assert process.returncode == 3, process.returncode
-            assert not process.stdout.read()
-            assert json.loads(process.stderr.read())['code'] == 'cancelled'
-        finally:
-            if process.poll() is None:
-                process.kill()
+                deadline = time.monotonic() + 10
+                # The open handshake proves signal handlers were installed before signalling.
+                while True:
+                    try:
+                        schema_fd = os.open(fifo, os.O_WRONLY | os.O_NONBLOCK)
+                        break
+                    except OSError as error:
+                        if error.errno != errno.ENXIO or time.monotonic() >= deadline:
+                            raise
+                        time.sleep(0.01)
+                try:
+                    os.write(schema_fd, (root / 'testdata/packet.schema.json').read_bytes())
+                finally:
+                    os.close(schema_fd)
+                process.stdin.write(original[:1])
+                process.stdin.flush()
+                while True:
+                    available = array.array('i', [0])
+                    fcntl.ioctl(process.stdin.fileno(), termios.FIONREAD, available, True)
+                    if available[0] == 0:
+                        break
+                    assert process.poll() is None and time.monotonic() < deadline
+                    time.sleep(0.01)
+                time.sleep(0.05)
+                process.send_signal(cancel_signal)
+                # Keep stdin open: EOF would conceal a cancellation hang.
                 process.wait(timeout=5)
-            for stream in (process.stdin, process.stdout, process.stderr):
-                stream.close()
-    print('PASS: broken stdout pipes exit 1 with diagnostics; SIGINT exits 3 while stdin remains open')
+                assert process.returncode == 3, (cancel_signal, process.returncode)
+                assert not process.stdout.read()
+                assert json.loads(process.stderr.read())['code'] == 'cancelled', cancel_signal
+            finally:
+                if process.poll() is None:
+                    process.kill()
+                    process.wait(timeout=5)
+                for stream in (process.stdin, process.stdout, process.stderr):
+                    stream.close()
+    print('PASS: broken stdout pipes exit 1 with diagnostics; SIGINT and SIGTERM exit 3 while stdin remains open')

@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 	"unicode/utf8"
@@ -293,7 +294,7 @@ func TestBoundedJSONReads(t *testing.T) {
 	if raw, e := readBounded(context.Background(), strings.NewReader("abcd"), 4); e != nil || string(raw) != "abcd" {
 		t.Fatal("exact read limit")
 	}
-	for _, r := range []io.Reader{zeroReader{}, badCountReader{}} {
+	for _, r := range []io.Reader{zeroReader{}, badCountReader{}, unexpectedEOFReader{}} {
 		if _, e := readBounded(context.Background(), r, 4); e == nil || e.(*ebyte.Diagnostic).Code != "read_failed" {
 			t.Fatal("bad reader")
 		}
@@ -401,5 +402,48 @@ func TestCancellationPreservesPublicationAndLocationDetails(t *testing.T) {
 	reported := errorDiagnostic(t, stderr.Bytes(), "cancelled")
 	if reported.Path != "/body" || reported.Offset == nil || *reported.Offset != 2 || reported.FieldStart == nil || *reported.FieldStart != 0 {
 		t.Fatal("cancellation lost known input position")
+	}
+}
+
+type unexpectedEOFReader struct{}
+
+func (unexpectedEOFReader) Read([]byte) (int, error) { return 0, io.ErrUnexpectedEOF }
+
+func TestUnexpectedEOFFromInputIsAnIOFailure(t *testing.T) {
+	var out, errOut bytes.Buffer
+	code := runContext(context.Background(), []string{"encode", "--schema", fixturePath(t, "packet.schema.json"), "--input", "-"}, unexpectedEOFReader{}, &out, &errOut)
+	if code != 1 || out.Len() != 0 {
+		t.Fatalf("code %d", code)
+	}
+	if d := errorDiagnostic(t, errOut.Bytes(), "read_failed"); d.Stage != "io" {
+		t.Fatalf("stage %q", d.Stage)
+	}
+}
+func TestTextInspectKeepsDecodeFailure(t *testing.T) {
+	schema := fixturePath(t, "packet.schema.json")
+	input := packetInput(t)
+	input = input[:len(input)-1]
+	sawFailedTrace := false
+	for limit := 0; limit <= 4096; limit += 7 {
+		codes := map[string]int{}
+		diagnostics := map[string]string{}
+		for _, format := range []string{"json", "text"} {
+			code, _, errOut := invoke(t, []string{"inspect", "--schema", schema, "--input", "-", "--format", format, "--max-trace-bytes", strconv.Itoa(limit)}, input)
+			codes[format] = code
+			var d ebyte.Diagnostic
+			if e := json.Unmarshal(errOut, &d); e != nil {
+				t.Fatalf("limit %d %s: %s", limit, format, errOut)
+			}
+			diagnostics[format] = d.Code
+		}
+		if codes["json"] == 2 && diagnostics["text"] != "truncated_input" {
+			t.Fatalf("limit %d: text inspect reported %s (exit %d) instead of the decode failure", limit, diagnostics["text"], codes["text"])
+		}
+		if codes["json"] == 2 && codes["text"] == 2 {
+			sawFailedTrace = true
+		}
+	}
+	if !sawFailedTrace {
+		t.Fatal("no limit exercised a renderable failed trace")
 	}
 }

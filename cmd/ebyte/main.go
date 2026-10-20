@@ -37,7 +37,8 @@ type options struct {
 
 func main() {
 	prepareSignals()
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	outputFileMode = defaultOutputMode()
+	ctx, stop := signal.NotifyContext(context.Background(), cancelSignals...)
 	// Restore default interrupt behavior promptly, including while file I/O blocks.
 	stopOnCancellation := context.AfterFunc(ctx, stop)
 	code := runContext(ctx, os.Args[1:], interruptibleStdin{ctx: ctx, reader: os.Stdin}, os.Stdout, os.Stderr)
@@ -174,6 +175,11 @@ func runContext(ctx context.Context, args []string, in io.Reader, out, errOut io
 					payload, e = textTrace(trace, opt.limits.MaxTraceBytes)
 				} else {
 					payload, e = jsonOutput(trace, opt.limits.MaxTraceBytes)
+				}
+				// A failed trace that can't be rendered within its ceiling must not
+				// hide the decode failure behind limit_exceeded: report the original.
+				if e != nil && operationError != nil {
+					e = operationError
 				}
 			} else {
 				e = operationError
@@ -381,9 +387,8 @@ func readBounded(ctx context.Context, r io.Reader, limit int) ([]byte, error) {
 		if n < 0 || n > request {
 			return nil, commandFailure("read_failed", "invalid reader count")
 		}
-		if e == io.ErrUnexpectedEOF {
-			return nil, commandFailure("truncated_input", "unexpected EOF while reading JSON")
-		}
+		// A reader reporting unexpected EOF failed mid-read: that's an I/O failure
+		// (exit 1), not a truncated binary field.
 		if e != nil && e != io.EOF {
 			return nil, commandFailure("read_failed", "input read failed")
 		}
