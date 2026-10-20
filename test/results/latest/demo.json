@@ -1,0 +1,325 @@
+{
+  "tool_version": "ebyte 0.0.0-dev",
+  "platform": "Linux",
+  "architecture": "x86_64",
+  "schema_sha256": "126bf06f961f7a814430197be73b292f5acfc28f32420c4aa87ea55abab96400",
+  "original_bytes": 21,
+  "edited_bytes": 25,
+  "original_sha256": "6407bb701190903a390ce78b7640d34093164d97a1d9bdb50541f90557e378f9",
+  "restored_sha256": "6407bb701190903a390ce78b7640d34093164d97a1d9bdb50541f90557e378f9",
+  "edited_sha256": "c911e1d928cd44f6c454e904b5afcc6a0103c0a4c64d2ae59a354dce34ea457b",
+  "unchanged_round_trip_identical": true,
+  "original_hex": "454201020141004220aa000100feff02002c01dead",
+  "edited_hex": "454201030141004220aa000100feff02002c010300ffffdead",
+  "original_document": {
+    "document_version": 1,
+    "schema_sha256": "126bf06f961f7a814430197be73b292f5acfc28f32420c4aa87ea55abab96400",
+    "values": {
+      "flags": "1",
+      "label": "A\u0000B ",
+      "magic": "4542",
+      "note": "dead",
+      "records": [
+        {
+          "id": "1",
+          "temperature": "-2"
+        },
+        {
+          "id": "2",
+          "temperature": "300"
+        }
+      ],
+      "reserved": "aa00",
+      "version": "1"
+    }
+  },
+  "edited_document": {
+    "document_version": 1,
+    "schema_sha256": "126bf06f961f7a814430197be73b292f5acfc28f32420c4aa87ea55abab96400",
+    "values": {
+      "flags": "1",
+      "label": "A\u0000B ",
+      "magic": "4542",
+      "note": "dead",
+      "records": [
+        {
+          "id": "1",
+          "temperature": "-2"
+        },
+        {
+          "id": "2",
+          "temperature": "300"
+        },
+        {
+          "id": "3",
+          "temperature": "-1"
+        }
+      ],
+      "reserved": "aa00",
+      "version": "1"
+    }
+  },
+  "original_trace": {
+    "trace_version": 1,
+    "schema_sha256": "126bf06f961f7a814430197be73b292f5acfc28f32420c4aa87ea55abab96400",
+    "state": "complete",
+    "entries": [
+      {
+        "path": "",
+        "kind": "struct",
+        "offset": 0,
+        "length": 21,
+        "state": "complete"
+      },
+      {
+        "path": "/magic",
+        "kind": "bytes",
+        "offset": 0,
+        "length": 2,
+        "state": "complete"
+      },
+      {
+        "path": "/version",
+        "kind": "u8",
+        "offset": 2,
+        "length": 1,
+        "state": "complete",
+        "value": "1"
+      },
+      {
+        "path": "/record_count",
+        "kind": "u8",
+        "offset": 3,
+        "length": 1,
+        "state": "complete",
+        "value": "2"
+      },
+      {
+        "path": "/flags",
+        "kind": "u8",
+        "offset": 4,
+        "length": 1,
+        "state": "complete",
+        "value": "1"
+      },
+      {
+        "path": "/label",
+        "kind": "string",
+        "offset": 5,
+        "length": 4,
+        "state": "complete"
+      },
+      {
+        "path": "/reserved",
+        "kind": "bytes",
+        "offset": 9,
+        "length": 2,
+        "state": "complete"
+      },
+      {
+        "path": "/records",
+        "kind": "array",
+        "offset": 11,
+        "length": 8,
+        "state": "complete"
+      },
+      {
+        "path": "/records/0",
+        "kind": "struct",
+        "offset": 11,
+        "length": 4,
+        "state": "complete"
+      },
+      {
+        "path": "/records/0/id",
+        "kind": "u16",
+        "offset": 11,
+        "length": 2,
+        "state": "complete",
+        "value": "1"
+      },
+      {
+        "path": "/records/0/temperature",
+        "kind": "i16",
+        "offset": 13,
+        "length": 2,
+        "state": "complete",
+        "value": "-2"
+      },
+      {
+        "path": "/records/1",
+        "kind": "struct",
+        "offset": 15,
+        "length": 4,
+        "state": "complete"
+      },
+      {
+        "path": "/records/1/id",
+        "kind": "u16",
+        "offset": 15,
+        "length": 2,
+        "state": "complete",
+        "value": "2"
+      },
+      {
+        "path": "/records/1/temperature",
+        "kind": "i16",
+        "offset": 17,
+        "length": 2,
+        "state": "complete",
+        "value": "300"
+      },
+      {
+        "path": "/note",
+        "kind": "bytes",
+        "offset": 19,
+        "length": 2,
+        "state": "complete"
+      }
+    ],
+    "diagnostic": null
+  },
+  "edited_trace": {
+    "trace_version": 1,
+    "schema_sha256": "126bf06f961f7a814430197be73b292f5acfc28f32420c4aa87ea55abab96400",
+    "state": "complete",
+    "entries": [
+      {
+        "path": "",
+        "kind": "struct",
+        "offset": 0,
+        "length": 25,
+        "state": "complete"
+      },
+      {
+        "path": "/magic",
+        "kind": "bytes",
+        "offset": 0,
+        "length": 2,
+        "state": "complete"
+      },
+      {
+        "path": "/version",
+        "kind": "u8",
+        "offset": 2,
+        "length": 1,
+        "state": "complete",
+        "value": "1"
+      },
+      {
+        "path": "/record_count",
+        "kind": "u8",
+        "offset": 3,
+        "length": 1,
+        "state": "complete",
+        "value": "3"
+      },
+      {
+        "path": "/flags",
+        "kind": "u8",
+        "offset": 4,
+        "length": 1,
+        "state": "complete",
+        "value": "1"
+      },
+      {
+        "path": "/label",
+        "kind": "string",
+        "offset": 5,
+        "length": 4,
+        "state": "complete"
+      },
+      {
+        "path": "/reserved",
+        "kind": "bytes",
+        "offset": 9,
+        "length": 2,
+        "state": "complete"
+      },
+      {
+        "path": "/records",
+        "kind": "array",
+        "offset": 11,
+        "length": 12,
+        "state": "complete"
+      },
+      {
+        "path": "/records/0",
+        "kind": "struct",
+        "offset": 11,
+        "length": 4,
+        "state": "complete"
+      },
+      {
+        "path": "/records/0/id",
+        "kind": "u16",
+        "offset": 11,
+        "length": 2,
+        "state": "complete",
+        "value": "1"
+      },
+      {
+        "path": "/records/0/temperature",
+        "kind": "i16",
+        "offset": 13,
+        "length": 2,
+        "state": "complete",
+        "value": "-2"
+      },
+      {
+        "path": "/records/1",
+        "kind": "struct",
+        "offset": 15,
+        "length": 4,
+        "state": "complete"
+      },
+      {
+        "path": "/records/1/id",
+        "kind": "u16",
+        "offset": 15,
+        "length": 2,
+        "state": "complete",
+        "value": "2"
+      },
+      {
+        "path": "/records/1/temperature",
+        "kind": "i16",
+        "offset": 17,
+        "length": 2,
+        "state": "complete",
+        "value": "300"
+      },
+      {
+        "path": "/records/2",
+        "kind": "struct",
+        "offset": 19,
+        "length": 4,
+        "state": "complete"
+      },
+      {
+        "path": "/records/2/id",
+        "kind": "u16",
+        "offset": 19,
+        "length": 2,
+        "state": "complete",
+        "value": "3"
+      },
+      {
+        "path": "/records/2/temperature",
+        "kind": "i16",
+        "offset": 21,
+        "length": 2,
+        "state": "complete",
+        "value": "-1"
+      },
+      {
+        "path": "/note",
+        "kind": "bytes",
+        "offset": 23,
+        "length": 2,
+        "state": "complete"
+      }
+    ],
+    "diagnostic": null
+  }
+}

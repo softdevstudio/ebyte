@@ -26,7 +26,7 @@ func TestAvailableCommands(t *testing.T) {
 		}
 	}
 }
-func TestUnavailableOperationsFailWithoutEcho(t *testing.T) {
+func TestInvalidArgumentsFailWithoutEcho(t *testing.T) {
 	for _, args := range [][]string{nil, {"--version", "SECRET"}, {"unknown-SECRET"}, {"decode", "--input=SECRET"}, {"encode"}, {"inspect"}, {"validate-schema"}} {
 		var out, errOut bytes.Buffer
 		if code := run(args, &out, &errOut); code != 2 || out.Len() != 0 || errOut.Len() == 0 || strings.Contains(errOut.String(), "SECRET") {

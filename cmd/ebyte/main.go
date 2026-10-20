@@ -1,36 +1,442 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
+	"strconv"
+	"strings"
 
 	"github.com/softdevstudio/ebyte"
 )
 
-func main() { os.Exit(run(os.Args[1:], os.Stdout, os.Stderr)) }
+const helpText = `EByte development build
+Usage: ebyte COMMAND --schema FILE [--input FILE|-] [--output FILE|-]
+Commands: validate-schema, decode, encode, inspect
+inspect: --format json|text (default json)
+--input is required for decode, encode and inspect. --output defaults to stdout (-).
+Schema files cannot use stdin. Output files must not already exist.
+Limits can only lower defaults: --max-schema-bytes, --max-schema-fields,
+--max-depth, --max-input-bytes, --max-output-bytes, --max-field-bytes,
+--max-array-elements, --max-value-nodes, --max-trace-entries,
+--max-document-bytes, --max-trace-bytes.
+Available: --help, --version. No public release is available. See README.md.
+`
+
+var errUsage = errors.New("invalid command arguments")
+
+type options struct {
+	command, schema, input, output, format string
+	limits                                 ebyte.Limits
+}
+
+func main() {
+	prepareSignals()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	// Restore default interrupt behavior promptly, including while file I/O blocks.
+	stopOnCancellation := context.AfterFunc(ctx, stop)
+	code := runContext(ctx, os.Args[1:], interruptibleStdin{ctx: ctx, reader: os.Stdin}, os.Stdout, os.Stderr)
+	stopOnCancellation()
+	stop()
+	os.Exit(code)
+}
+
+type interruptibleStdin struct {
+	ctx    context.Context
+	reader io.Reader
+}
+
+func (r interruptibleStdin) Read(p []byte) (int, error) {
+	if len(p) == 0 {
+		return 0, nil
+	}
+	if r.ctx.Err() != nil {
+		return 0, r.ctx.Err()
+	}
+	type readResult struct {
+		data []byte
+		n    int
+		err  error
+	}
+	done := make(chan readResult, 1)
+	// Own the buffer so a cancelled read cannot later modify a caller's memory.
+	go func() { data := make([]byte, len(p)); n, err := r.reader.Read(data); done <- readResult{data, n, err} }()
+	select {
+	case <-r.ctx.Done():
+		return 0, r.ctx.Err()
+	case result := <-done:
+		if result.n >= 0 && result.n <= len(result.data) {
+			copy(p, result.data[:result.n])
+		}
+		return result.n, result.err
+	}
+}
+func reportContext(ctx context.Context, w io.Writer, err error) int {
+	if ctx.Err() != nil {
+		var d *ebyte.Diagnostic
+		if errors.As(err, &d) && d.Code == "cancelled" {
+			return report(w, err)
+		}
+		if d != nil && d.Code == "write_failed" {
+			cancelled := commandFailure("cancelled", "context cancelled; partial output may remain").(*ebyte.Diagnostic)
+			cancelled.Offset = d.Offset
+			err = cancelled
+		} else {
+			err = commandCancelled(ctx)
+		}
+	}
+	return report(w, err)
+}
 func run(args []string, out, errOut io.Writer) int {
-	if len(args) == 1 {
-		switch args[0] {
-		case "--version":
-			if _, e := fmt.Fprintln(out, "ebyte "+ebyte.Version); e != nil {
+	return runContext(context.Background(), args, os.Stdin, out, errOut)
+}
+func runContext(ctx context.Context, args []string, in io.Reader, out, errOut io.Writer) int {
+	if len(args) == 1 && (args[0] == "--help" || args[0] == "help" || args[0] == "--version") {
+		payload := helpText
+		if args[0] == "--version" {
+			payload = "ebyte " + ebyte.Version + "\n"
+		}
+		if e := writePayload(ctx, out, []byte(payload)); e != nil {
+			return reportContext(ctx, errOut, e)
+		}
+		return 0
+	}
+	if len(args) == 2 && validCommand(args[0]) && args[1] == "--help" {
+		if e := writePayload(ctx, out, []byte(helpText)); e != nil {
+			return reportContext(ctx, errOut, e)
+		}
+		return 0
+	}
+	opt, e := parseOptions(args)
+	if e != nil {
+		if errors.Is(e, errUsage) {
+			if e = writePayload(ctx, errOut, []byte("usage: ebyte COMMAND --schema FILE [--input FILE|-] [--output FILE|-]; see --help\n")); e != nil {
 				return 1
 			}
-			return 0
-		case "--help", "help":
-			if _, e := fmt.Fprintln(out, "EByte development build\nAvailable: --version, --help\nPlanned: validate-schema, decode, encode, inspect\nCodec commands are not available yet. The Go library is documented in README.md. No release is available. See README.md."); e != nil {
-				return 1
+			return 2
+		}
+		return reportContext(ctx, errOut, e)
+	}
+	if e = commandCancelled(ctx); e != nil {
+		return reportContext(ctx, errOut, e)
+	}
+	raw, e := readPath(ctx, opt.schema, nil, opt.limits.MaxSchemaBytes)
+	if e != nil {
+		return reportContext(ctx, errOut, e)
+	}
+	plan, e := ebyte.Compile(raw, opt.limits)
+	if e != nil {
+		return reportContext(ctx, errOut, e)
+	}
+	var payload []byte
+	var operationError error
+	if opt.command == "validate-schema" {
+		payload, e = jsonOutput(struct {
+			SchemaVersion int    `json:"schema_version"`
+			Name          string `json:"name"`
+			SchemaSHA256  string `json:"schema_sha256"`
+			Valid         bool   `json:"valid"`
+		}{1, plan.Name(), plan.SchemaSHA256(), true}, opt.limits.MaxDocumentBytes)
+	} else {
+		reader, closeInput, openError := openInput(opt.input, in)
+		if openError != nil {
+			return reportContext(ctx, errOut, openError)
+		}
+		switch opt.command {
+		case "decode":
+			var document *ebyte.Document
+			document, _, e = plan.Decode(ctx, reader)
+			if e == nil {
+				payload, e = jsonOutput(document, opt.limits.MaxDocumentBytes)
 			}
-			return 0
+		case "inspect":
+			var trace *ebyte.Trace
+			trace, operationError = plan.Inspect(ctx, reader)
+			if trace != nil {
+				if opt.format == "text" {
+					payload, e = textTrace(trace, opt.limits.MaxTraceBytes)
+				} else {
+					payload, e = jsonOutput(trace, opt.limits.MaxTraceBytes)
+				}
+			} else {
+				e = operationError
+			}
+		case "encode":
+			var documentBytes []byte
+			documentBytes, e = readBounded(ctx, reader, opt.limits.MaxDocumentBytes)
+			if e == nil {
+				var document *ebyte.Document
+				document, e = plan.LoadDocument(ctx, documentBytes)
+				if e == nil {
+					buffer := limitedBuffer{limit: opt.limits.MaxOutputBytes}
+					e = plan.Encode(ctx, document, &buffer)
+					if e == nil {
+						payload = buffer.data
+					}
+				}
+			}
+		}
+		closeError := closeInput()
+		if e == nil && closeError != nil {
+			e = commandFailure("read_failed", "input close failed")
 		}
 	}
-	message := "usage: ebyte --version | --help"
-	if len(args) > 0 {
-		switch args[0] {
-		case "validate-schema", "decode", "encode", "inspect":
-			message = "codec operations are not available in this development build"
+	if e != nil {
+		return reportContext(ctx, errOut, e)
+	}
+	if e = commandCancelled(ctx); e != nil {
+		return reportContext(ctx, errOut, e)
+	}
+	if opt.output == "-" {
+		e = writePayload(ctx, out, payload)
+	} else {
+		e = publishOutput(ctx, opt.output, func(w io.Writer) error { return writePayload(ctx, w, payload) })
+	}
+	if e != nil {
+		return reportContext(ctx, errOut, e)
+	}
+	if operationError != nil {
+		return reportContext(ctx, errOut, operationError)
+	}
+	return 0
+}
+func validCommand(s string) bool {
+	return s == "validate-schema" || s == "decode" || s == "encode" || s == "inspect"
+}
+func parseOptions(args []string) (options, error) {
+	opt := options{output: "-", format: "json", limits: ebyte.DefaultLimits()}
+	if len(args) == 0 || !validCommand(args[0]) {
+		return opt, errUsage
+	}
+	opt.command = args[0]
+	settings := map[string]*int{"max-schema-bytes": &opt.limits.MaxSchemaBytes, "max-schema-fields": &opt.limits.MaxSchemaFields, "max-depth": &opt.limits.MaxDepth, "max-input-bytes": &opt.limits.MaxInputBytes, "max-output-bytes": &opt.limits.MaxOutputBytes, "max-field-bytes": &opt.limits.MaxFieldBytes, "max-array-elements": &opt.limits.MaxArrayElements, "max-value-nodes": &opt.limits.MaxValueNodes, "max-trace-entries": &opt.limits.MaxTraceEntries, "max-document-bytes": &opt.limits.MaxDocumentBytes, "max-trace-bytes": &opt.limits.MaxTraceBytes}
+	defaults := map[string]int{}
+	for key, ptr := range settings {
+		defaults[key] = *ptr
+	}
+	seen := map[string]bool{}
+	for i := 1; i < len(args); i++ {
+		arg := args[i]
+		if !strings.HasPrefix(arg, "--") {
+			return opt, errUsage
+		}
+		key, value, hasValue := strings.Cut(arg[2:], "=")
+		if seen[key] {
+			return opt, errUsage
+		}
+		seen[key] = true
+		if !hasValue {
+			i++
+			if i >= len(args) || strings.HasPrefix(args[i], "--") {
+				return opt, errUsage
+			}
+			value = args[i]
+		}
+		if value == "" {
+			return opt, errUsage
+		}
+		switch key {
+		case "schema":
+			opt.schema = value
+		case "input":
+			opt.input = value
+		case "output":
+			opt.output = value
+		case "format":
+			if opt.command != "inspect" || (value != "json" && value != "text") {
+				return opt, errUsage
+			}
+			opt.format = value
+		default:
+			ptr, ok := settings[key]
+			if !ok {
+				return opt, errUsage
+			}
+			for j := range value {
+				if value[j] < '0' || value[j] > '9' {
+					return opt, errUsage
+				}
+			}
+			n, e := strconv.ParseUint(value, 10, 64)
+			if e != nil || n > uint64(defaults[key]) {
+				return opt, commandFailure("limit_exceeded", "requested ceiling exceeds hard limit")
+			}
+			*ptr = int(n)
 		}
 	}
-	_, _ = fmt.Fprintln(errOut, message)
-	return 2
+	if opt.schema == "" || opt.schema == "-" {
+		return opt, errUsage
+	}
+	if opt.command == "validate-schema" {
+		if seen["input"] {
+			return opt, errUsage
+		}
+	} else if opt.input == "" {
+		return opt, errUsage
+	}
+	return opt, nil
+}
+func commandFailure(code, observed string) error {
+	return &ebyte.Diagnostic{DiagnosticVersion: 1, Stage: "io", Code: code, Expected: "complete bounded command", Observed: observed}
+}
+func commandCancelled(ctx context.Context) error {
+	if ctx.Err() != nil {
+		return commandFailure("cancelled", "context cancelled")
+	}
+	return nil
+}
+func report(w io.Writer, err error) int {
+	var d *ebyte.Diagnostic
+	if !errors.As(err, &d) {
+		d = commandFailure("read_failed", "operation failed").(*ebyte.Diagnostic)
+	}
+	raw, _ := json.Marshal(d)
+	raw = append(raw, '\n')
+	if e := writePayload(context.Background(), w, raw); e != nil {
+		return 1
+	}
+	switch d.Code {
+	case "cancelled":
+		return 3
+	case "limit_exceeded":
+		return 4
+	case "read_failed", "write_failed", "destination_exists":
+		return 1
+	default:
+		return 2
+	}
+}
+func writePayload(ctx context.Context, w io.Writer, p []byte) error {
+	if e := commandCancelled(ctx); e != nil {
+		return e
+	}
+	if len(p) > 0 {
+		n, e := w.Write(p)
+		if e != nil || n != len(p) {
+			d := commandFailure("write_failed", "write failed; partial output may remain").(*ebyte.Diagnostic)
+			if n >= 0 && n <= len(p) {
+				at := int64(n)
+				d.Offset = &at
+			}
+			return d
+		}
+	}
+	if ctx.Err() != nil {
+		return commandFailure("cancelled", "context cancelled; output may already be written")
+	}
+	return nil
+}
+func openInput(path string, stdin io.Reader) (io.Reader, func() error, error) {
+	if path == "-" {
+		return stdin, func() error { return nil }, nil
+	}
+	f, e := os.Open(path)
+	if e != nil {
+		return nil, nil, commandFailure("read_failed", "input open failed")
+	}
+	return f, f.Close, nil
+}
+func readPath(ctx context.Context, path string, stdin io.Reader, limit int) ([]byte, error) {
+	r, closeInput, e := openInput(path, stdin)
+	if e != nil {
+		return nil, e
+	}
+	raw, e := readBounded(ctx, r, limit)
+	closed := closeInput()
+	if e == nil && closed != nil {
+		e = commandFailure("read_failed", "input close failed")
+	}
+	return raw, e
+}
+func readBounded(ctx context.Context, r io.Reader, limit int) ([]byte, error) {
+	data := []byte{}
+	var chunk [32768]byte
+	empty := 0
+	for {
+		if e := commandCancelled(ctx); e != nil {
+			return nil, e
+		}
+		request := limit + 1 - len(data)
+		if request > len(chunk) {
+			request = len(chunk)
+		}
+		n, e := r.Read(chunk[:request])
+		if n < 0 || n > request {
+			return nil, commandFailure("read_failed", "invalid reader count")
+		}
+		if e == io.ErrUnexpectedEOF {
+			return nil, commandFailure("truncated_input", "unexpected EOF while reading JSON")
+		}
+		if e != nil && e != io.EOF {
+			return nil, commandFailure("read_failed", "input read failed")
+		}
+		data = append(data, chunk[:n]...)
+		if len(data) > limit {
+			return nil, commandFailure("limit_exceeded", "input exceeds configured byte ceiling")
+		}
+		if e == io.EOF {
+			if e := commandCancelled(ctx); e != nil {
+				return nil, e
+			}
+			return data, nil
+		}
+		if n == 0 {
+			empty++
+			if empty >= 100 {
+				return nil, commandFailure("read_failed", "reader made no progress")
+			}
+		} else {
+			empty = 0
+		}
+	}
+}
+func jsonOutput(v any, limit int) ([]byte, error) {
+	raw, e := json.Marshal(v)
+	if e != nil {
+		return nil, commandFailure("write_failed", "JSON serialization failed")
+	}
+	if len(raw) > limit {
+		return nil, commandFailure("limit_exceeded", "serialized JSON exceeds byte ceiling")
+	}
+	return raw, nil
+}
+
+type limitedBuffer struct {
+	data  []byte
+	limit int
+}
+
+func (b *limitedBuffer) Write(p []byte) (int, error) {
+	if len(p) > b.limit-len(b.data) {
+		return 0, commandFailure("limit_exceeded", "serialized output exceeds byte ceiling")
+	}
+	b.data = append(b.data, p...)
+	return len(p), nil
+}
+func textTrace(trace *ebyte.Trace, limit int) ([]byte, error) {
+	b := limitedBuffer{limit: limit}
+	if _, e := fmt.Fprintf(&b, "EByte trace state=%s schema_sha256=%s\n", trace.State, trace.SchemaSHA256); e != nil {
+		return nil, e
+	}
+	for _, entry := range trace.Entries {
+		line := fmt.Sprintf("%s %s offset=%d length=%d state=%s", strconv.Quote(entry.Path), entry.Kind, entry.Offset, entry.Length, entry.State)
+		if entry.Value != nil {
+			line += " value=" + *entry.Value
+		}
+		line += "\n"
+		if _, e := b.Write([]byte(line)); e != nil {
+			return nil, e
+		}
+	}
+	if trace.Diagnostic != nil {
+		raw, _ := json.Marshal(trace.Diagnostic)
+		if _, e := fmt.Fprintf(&b, "diagnostic=%s\n", raw); e != nil {
+			return nil, e
+		}
+	}
+	return b.data, nil
 }

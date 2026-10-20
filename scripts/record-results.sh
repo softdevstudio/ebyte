@@ -36,4 +36,5 @@ build_dir="$(mktemp -d)"
 trap 'rm -rf "$build_dir"' EXIT
 go build -o "$build_dir/ebyte" ./cmd/ebyte
 python3 scripts/smoke.py "$build_dir/ebyte"
-printf 'PASS: formatting, vet, race, independent fixture/decoder oracles, bounded decoder/document/lossless fuzz, build and executable skeleton smoke\n'
+python3 scripts/demo.py "$build_dir/ebyte" test/results/latest/demo.json
+printf 'PASS: formatting, vet, race, independent fixture/decoder oracles, bounded decoder/document/lossless fuzz, build and operational CLI smoke and saved round-trip demo\n'

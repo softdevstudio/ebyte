@@ -1,10 +1,10 @@
 # EByte
 
-EByte is a binary schema engine being built in Go. Describe a format once, decode it to editable JSON, encode it back and inspect the field and byte offset where an assumption fails. The library and CLI will share one interpreter, without generated code or a hosted service.
+EByte is a binary schema engine being built in Go. Describe a format once, decode it to editable JSON, encode it back and inspect the field and byte offset where an assumption fails. The library and CLI share one interpreter, without generated code or a hosted service.
 
 ## Current functionality
 
-This 0.0.0-dev build compiles bounded schemas, decodes binary input to editable values and field traces, and encodes validated documents through the Go library. Only --version and --help work in the CLI. Operational CLI commands are not implemented. No executable release is available; license selection is pending. Unchanged round trips are checked against independent byte fixtures and bounded fuzz tests.
+This 0.0.0-dev build compiles bounded schemas, decodes binary input to editable values and field traces, and encodes validated documents through the Go library. The CLI provides validate-schema, decode, encode and inspect, including JSON/text traces and stdin/stdout. No executable release is available; license selection is pending. Unchanged round trips are checked against independent byte fixtures and bounded fuzz tests.
 
 ```sh
 go build -o /tmp/ebyte ./cmd/ebyte
@@ -13,7 +13,14 @@ go build -o /tmp/ebyte ./cmd/ebyte
 bash scripts/record-results.sh
 ```
 
-The command refuses unavailable operations without opening input/output paths or echoing arguments. Planned commands are validate-schema, decode, encode and inspect. Their options will be specified when the shared interpreter exists.
+Every command requires --schema FILE. Decode, encode and inspect also require --input FILE or --input - for stdin. Output defaults to stdout; --output FILE publishes a new file and refuses any existing destination. Schema validation completes before the binary/document input opens. See [CLI reference](docs/cli.md) for commands, limits, failure output and exit codes.
+
+```sh
+/tmp/ebyte validate-schema --schema testdata/packet.schema.json
+python3 scripts/demo.py /tmp/ebyte /tmp/ebyte-demo.json
+```
+
+The built-binary demo starts with the independently specified 21-byte packet, decodes it, verifies an unchanged byte-identical re-encode, adds one record and checks the specified 25-byte output. Its saved evidence includes hashes, values and before/after traces: the derived count changes from 2 to 3 and the note moves from offset 19 to 23. This is a small synthetic format demonstration, not a throughput or general-format compatibility claim. The recorder saves its real run to test/results/latest/demo.json.
 
 ## Library schema compilation
 
@@ -71,7 +78,7 @@ Encode(ctx, document, writer) returns error. It revalidates all values, so edits
 
 The encoder prepares at most MaxOutputBytes of binary data before the first write. Any validation failure writes nothing. LoadDocument uses the same preparation to validate, then discards those bytes; Encode prepares them again so caller edits are checked. This is a bounded in-memory implementation, not a streaming encoder. Writer errors and short writes report write_failed; partial output may remain and must be discarded. Invalid writer counts have unknown (null) offsets. Cancellation after a write can return cancelled even if bytes have already been written. Context checks cannot interrupt a blocked Write. Known assertion and ASCII errors identify their position in the prepared binary; this does not mean those bytes reached the destination.
 
-The CLI's internal publication helper stages a private 0600 file in an opened parent directory, syncs and closes it, then creates a new hard link without replacing a destination. Tests cover existing files, symlinks, directories and destinations created during staging, producer/sync failures, cancellation and renamed parents. The helper is enabled only on native-tested Linux/macOS and fails on filesystems without hard-link support. The parent directory's entries must be trusted against hostile concurrent modification. This does not promise directory durability across power loss. If cleanup fails after linking, an error says the destination may already exist. Operational CLI commands will use this helper in the next session; it is not exposed as a library API.
+The CLI publication helper stages a private 0600 file in an opened parent directory, syncs and closes it, then creates a new hard link without replacing a destination. Tests cover existing files, symlinks, directories and destinations created during staging, producer/sync failures, cancellation and renamed parents. The helper is enabled only on native-tested Linux/macOS and fails on filesystems without hard-link support. The parent directory's entries must be trusted against hostile concurrent modification. This does not promise directory durability across power loss. If cleanup fails after linking, an error says the destination may already exist. All CLI file outputs use this helper; it is not exposed as a library API.
 
 ## Contracts and fixtures
 
@@ -81,6 +88,6 @@ The initial subset is integers, ASCII/UTF-8 strings, bytes, counted arrays and e
 
 ## Development and delivery
 
-CLAUDE.md is the only plan and handoff. AGENTS.md points to it. Follow the supplied chatgpt-project-standards.md. Linux/macOS CI runs formatting, vet, race tests, fixture checks and a built-command smoke; the recorder replaces test/results/latest. A pre-release native/platform gate and license selection are required before automatic publication. No workflow currently publishes a release.
+CLAUDE.md is the only plan and handoff. AGENTS.md points to it. Follow the supplied chatgpt-project-standards.md. Linux/macOS CI runs formatting, vet, race tests, fixture checks, three bounded fuzz runs, process-level CLI smoke and a saved compiled-binary demo; the recorder replaces test/results/latest. A pre-release native/platform gate and license selection are required before automatic publication. No workflow currently publishes a release.
 
 Website work is deferred to the final session. The site repository and ebyte.org connection will be supplied later; no site or studio listing is being published during code prototyping.
