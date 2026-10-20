@@ -170,20 +170,12 @@ func runContext(ctx context.Context, args []string, in io.Reader, out, errOut io
 		case "inspect":
 			var trace *ebyte.Trace
 			trace, operationError = plan.Inspect(ctx, reader)
-			if trace != nil {
+			payload, e = renderInspect(trace, operationError, func(t *ebyte.Trace) ([]byte, error) {
 				if opt.format == "text" {
-					payload, e = textTrace(trace, opt.limits.MaxTraceBytes)
-				} else {
-					payload, e = jsonOutput(trace, opt.limits.MaxTraceBytes)
+					return textTrace(t, opt.limits.MaxTraceBytes)
 				}
-				// A failed trace that can't be rendered within its ceiling must not
-				// hide the decode failure behind limit_exceeded: report the original.
-				if e != nil && operationError != nil {
-					e = operationError
-				}
-			} else {
-				e = operationError
-			}
+				return jsonOutput(t, opt.limits.MaxTraceBytes)
+			})
 		case "encode":
 			var documentBytes []byte
 			documentBytes, e = readBounded(ctx, reader, opt.limits.MaxDocumentBytes)
@@ -288,6 +280,9 @@ func parseOptions(args []string) (options, error) {
 		}
 	}
 	if opt.schema == "" || opt.schema == "-" {
+		return opt, errUsage
+	}
+	if opt.output != "-" && !validDestination(opt.output) {
 		return opt, errUsage
 	}
 	if opt.command == "validate-schema" {
@@ -457,4 +452,18 @@ func textTrace(trace *ebyte.Trace, limit int) ([]byte, error) {
 		}
 	}
 	return b.data, nil
+}
+
+// renderInspect renders a trace. When the decode itself failed and its trace
+// can't be rendered within the ceiling, the decode failure is reported rather
+// than hidden behind the rendering limit.
+func renderInspect(trace *ebyte.Trace, operationError error, render func(*ebyte.Trace) ([]byte, error)) ([]byte, error) {
+	if trace == nil {
+		return nil, operationError
+	}
+	payload, e := render(trace)
+	if e != nil && operationError != nil {
+		return nil, operationError
+	}
+	return payload, e
 }

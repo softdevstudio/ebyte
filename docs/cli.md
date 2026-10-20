@@ -1,6 +1,6 @@
 # EByte command reference
 
-The current release version is 0.1.0, licensed under Apache License 2.0. Build it from the repository with Go pinned by go.mod: go build -o /tmp/ebyte ./cmd/ebyte. Commands share the library interpreter and its strict schema/document contracts. They never guess a binary format. Pass its schema explicitly.
+The current release version is 0.1.1, licensed under Apache License 2.0. Build it from the repository with Go pinned by go.mod: go build -o /tmp/ebyte ./cmd/ebyte. Commands share the library interpreter and its strict schema/document contracts. They never guess a binary format. Pass its schema explicitly.
 
 ## Commands
 
@@ -28,7 +28,7 @@ Exit 0 means completion. Exit 1 is runtime/I/O failure, including destination_ex
 
 Ctrl-C cancels the command, and on Unix so does SIGTERM. CLI stdin reads use an owned temporary read buffer so a pending read cannot prevent cancellation or later mutate a caller's buffer. A blocked read worker can remain until process exit. The first cancelling signal also restores default handling, allowing a further signal to stop other blocking filesystem operations; a process stopped that way, or by SIGKILL, can leave a .ebyte-*.tmp staging file in the output directory; library context checks alone cannot interrupt those calls. On Unix, SIGPIPE is ignored so broken stdout pipes take the normal write_failed/exit-1 path. Cancellation after a write preserves warnings that output may already be written or that staging cleanup failed, along with known field/byte locations. Other blocking filesystem operations can still delay cooperative cancellation.
 
-File publication is enabled on native-tested Linux/macOS and requires same-directory hard-link support. It stages a private 0600 file, sets the finished file to 0666 minus the umask, syncs and closes it, then links to a new name without replacing anything. A destination ending in a path separator or naming ., .. or / is refused with write_failed. The opened parent directory must be trusted against hostile modification of its entries. Parent renames stay anchored to the opened directory. There is no power-loss directory durability promise, and unsupported platforms/filesystems fail closed.
+File publication is enabled on native-tested Linux/macOS and requires same-directory hard-link support. It stages a private 0600 file, sets the finished file to 0666 minus the umask, syncs and closes it, then links to a new name without replacing anything. A destination ending in a path separator or naming ., .. or / is a usage error (exit 2) before any input is read. The filesystem must also allow changing the staged file's mode. The opened parent directory must be trusted against hostile modification of its entries. Parent renames stay anchored to the opened directory. There is no power-loss directory durability promise, and unsupported platforms/filesystems fail closed.
 
 ## Reproducible sample
 

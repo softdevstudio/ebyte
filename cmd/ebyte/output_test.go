@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -313,8 +314,24 @@ func TestPublishedFileUsesOutputMode(t *testing.T) {
 }
 func TestDefaultOutputModeFollowsUmask(t *testing.T) {
 	supportedPublication(t)
-	mode := defaultOutputMode()
-	if mode&^0666 != 0 || mode&0600 != 0600 {
-		t.Fatalf("unexpected default output mode %v", mode)
+	if runtime.GOOS != "linux" {
+		t.Skip("umask read independently from /proc on Linux only")
 	}
+	status, e := os.ReadFile("/proc/self/status")
+	if e != nil {
+		t.Skip("no /proc/self/status")
+	}
+	for _, line := range strings.Split(string(status), "\n") {
+		if value, ok := strings.CutPrefix(line, "Umask:"); ok {
+			mask, e := strconv.ParseUint(strings.TrimSpace(value), 8, 32)
+			if e != nil {
+				t.Fatal(e)
+			}
+			if got, want := defaultOutputMode(), os.FileMode(0666&^mask); got != want {
+				t.Fatalf("default output mode %v, want %v", got, want)
+			}
+			return
+		}
+	}
+	t.Skip("kernel does not report Umask")
 }

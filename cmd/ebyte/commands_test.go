@@ -10,7 +10,6 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"strconv"
 	"strings"
 	"testing"
 	"unicode/utf8"
@@ -419,31 +418,39 @@ func TestUnexpectedEOFFromInputIsAnIOFailure(t *testing.T) {
 		t.Fatalf("stage %q", d.Stage)
 	}
 }
-func TestTextInspectKeepsDecodeFailure(t *testing.T) {
-	schema := fixturePath(t, "packet.schema.json")
-	input := packetInput(t)
-	input = input[:len(input)-1]
-	sawFailedTrace := false
-	for limit := 0; limit <= 4096; limit += 7 {
-		codes := map[string]int{}
-		diagnostics := map[string]string{}
-		for _, format := range []string{"json", "text"} {
-			code, _, errOut := invoke(t, []string{"inspect", "--schema", schema, "--input", "-", "--format", format, "--max-trace-bytes", strconv.Itoa(limit)}, input)
-			codes[format] = code
-			var d ebyte.Diagnostic
-			if e := json.Unmarshal(errOut, &d); e != nil {
-				t.Fatalf("limit %d %s: %s", limit, format, errOut)
-			}
-			diagnostics[format] = d.Code
-		}
-		if codes["json"] == 2 && diagnostics["text"] != "truncated_input" {
-			t.Fatalf("limit %d: text inspect reported %s (exit %d) instead of the decode failure", limit, diagnostics["text"], codes["text"])
-		}
-		if codes["json"] == 2 && codes["text"] == 2 {
-			sawFailedTrace = true
-		}
+func TestRenderInspectKeepsDecodeFailure(t *testing.T) {
+	trace := &ebyte.Trace{TraceVersion: 1, State: "failed", Entries: []ebyte.TraceEntry{}}
+	decodeFailure := &ebyte.Diagnostic{DiagnosticVersion: 1, Stage: "decode", Code: "truncated_input"}
+	tooBig := func(*ebyte.Trace) ([]byte, error) {
+		return nil, commandFailure("limit_exceeded", "serialized output exceeds byte ceiling")
 	}
-	if !sawFailedTrace {
-		t.Fatal("no limit exercised a renderable failed trace")
+	fits := func(*ebyte.Trace) ([]byte, error) { return []byte("trace"), nil }
+	if _, e := renderInspect(trace, decodeFailure, tooBig); e != decodeFailure {
+		t.Fatalf("decode failure hidden by rendering limit: %v", e)
+	}
+	if payload, e := renderInspect(trace, decodeFailure, fits); e != nil || string(payload) != "trace" {
+		t.Fatal("failed trace not rendered")
+	}
+	if _, e := renderInspect(trace, nil, tooBig); e.(*ebyte.Diagnostic).Code != "limit_exceeded" {
+		t.Fatal("complete trace over its ceiling must report the limit")
+	}
+	if _, e := renderInspect(nil, decodeFailure, fits); e != decodeFailure {
+		t.Fatal("missing trace must report the decode failure")
+	}
+	// The real text renderer, with a ceiling below the failed trace's size.
+	text := func(t *ebyte.Trace) ([]byte, error) { return textTrace(t, 8) }
+	if _, e := renderInspect(trace, decodeFailure, text); e != decodeFailure {
+		t.Fatal("text rendering limit hid the decode failure")
+	}
+}
+func TestDirectoryStyleOutputIsAUsageError(t *testing.T) {
+	dir := t.TempDir()
+	for _, output := range []string{dir + "/", dir + "/.", dir + "/..", "/"} {
+		var out, errOut bytes.Buffer
+		reads := &countingReader{Reader: bytes.NewReader(packetInput(t))}
+		code := runContext(context.Background(), []string{"decode", "--schema", fixturePath(t, "packet.schema.json"), "--input", "-", "--output", output}, reads, &out, &errOut)
+		if code != 2 || reads.bytes != 0 || strings.Contains(errOut.String(), dir) {
+			t.Fatalf("%q: code %d, read %d bytes", output, code, reads.bytes)
+		}
 	}
 }

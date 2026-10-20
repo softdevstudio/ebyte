@@ -3,6 +3,7 @@
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -67,6 +68,10 @@ lines = ['EByte ' + version, '', 'Apache License 2.0. One schema for decoding, e
          'Source commit: ' + revision, '', 'Archive verification:']
 for item in manifest['archives']:
     lines.append('- ' + item['archive'] + ': ' + item['metadata']['verification'])
+changes = re.search(r'^### EByte v' + re.escape(version) + r'\n(.*?)(?=^### |\Z)',
+                    (root / 'docs' / 'releases.md').read_text(encoding='utf-8'), re.M | re.S)
+if changes and changes.group(1).strip():
+    lines.extend(['', 'Changes:', changes.group(1).strip()])
 lines.extend(['', 'Windows supports stdin/stdout and file input; CLI --output FILE publication remains disabled there.',
               'Linux/macOS file publication requires hard links and a trusted output directory. Blocking filesystem calls may delay cancellation.',
               'Documents, traces and encoded output materialize in bounded memory. Allocation totals are not peak memory or throughput guarantees.',
