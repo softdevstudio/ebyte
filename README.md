@@ -86,6 +86,10 @@ The encoder prepares at most MaxOutputBytes of binary data before the first writ
 
 The CLI publication helper stages a private 0600 file in an opened parent directory, sets the finished file to 0666 minus the process umask (0644 under the common 022 umask), syncs and closes it, then creates a new hard link without replacing a destination. Destinations that name a directory rather than a file, such as out/, ., .. or /, are a usage error (exit 2) before any input is read, instead of becoming out/out. Tests cover existing files, symlinks, directories, directory-style names and destinations created during staging, producer/mode/sync failures, cancellation and renamed parents. The helper is enabled only on native-tested Linux/macOS and fails on filesystems without hard-link support. The parent directory's entries must be trusted against hostile concurrent modification. This does not promise directory durability across power loss. If cleanup fails after linking, an error says the destination may already exist. All CLI file outputs use this helper; it is not exposed as a library API.
 
+## Schema library
+
+[schemas/](schemas/) holds ready-made schemas for a plain PCM WAV, an uncompressed 24-bit BMP and a one-file stored ZIP, each with a real sample that the tests decode and encode back to identical bytes. Their limits are listed in [schemas/README.md](schemas/README.md).
+
 ## Contracts and fixtures
 
 Read [schema-v1](docs/schema-v1.md), [document-v1](docs/document-v1.md) and [errors-v1](docs/errors-v1.md). [Fixture reference](docs/fixtures.md) explains independently specified examples and expected failures. Fixed-width strings preserve embedded NUL and trailing spaces; raw byte fields preserve opaque data. Integers use decimal strings in editable JSON. Derived array counts are absent from editable values and calculated by the encoder; inspection exposes the stored count.

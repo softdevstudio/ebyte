@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "name": "pcm_wav",
+  "endian": "little",
+  "fields": [
+    {"name": "riff", "type": "bytes", "length": 4, "expect": "52494646"},
+    {"name": "riff_size", "type": "u32"},
+    {"name": "wave", "type": "bytes", "length": 4, "expect": "57415645"},
+    {"name": "fmt_id", "type": "bytes", "length": 4, "expect": "666d7420"},
+    {"name": "fmt_size", "type": "u32", "expect": "16"},
+    {"name": "audio_format", "type": "u16", "expect": "1"},
+    {"name": "channels", "type": "u16"},
+    {"name": "sample_rate", "type": "u32"},
+    {"name": "byte_rate", "type": "u32"},
+    {"name": "block_align", "type": "u16"},
+    {"name": "bits_per_sample", "type": "u16"},
+    {"name": "data_id", "type": "bytes", "length": 4, "expect": "64617461"},
+    {"name": "data_size", "type": "u32"},
+    {"name": "samples", "type": "bytes", "length": {"field": "data_size"}}
+  ]
+}

@@ -72,6 +72,18 @@ October 20, 2026, fix release: YK asked for all nine findings of the quick revie
 
 October 20, 2026, launch completion: ebyte.org is live with the new site (checked with the fetch tool: home page, posts, download links and the footer's SoftDevStudio.com line; images couldn't be fetched as SVG through that tool, and no browser was available). At YK's suggestion three more posts were added, each run with the downloaded v0.1.1 binary on real files and given its own SVG: a BMP case study (header flip, DPI and pixel edits checked with Pillow, five failures), a ZIP case study (one stored file, date and comment edits checked with zipfile, the two-file failure at offset 72, an undetected CRC flip) and a shell-script use example sorting seven recordings by exit code. EByte was added to softdevstudio.com as the twenty-fifth project (data/studio.toml entry, CONTENT-PLAN.md brief, names, tag, footer, feeds and session log, and a note on 0.1.0 and 0.1.1). YK confirmed both BitSpeed and EByte show on the live studio site and that all ebyte.org post images resolve; an earlier fetch-tool result suggesting otherwise was a stale cached copy.
 
+## Approved plan after 0.1.1 (YK, October 20, 2026)
+
+YK approved all of these and asked for short phases: finish one, pause, report, and wait for his go-ahead before the next. Each code phase follows the code and completion standard (contract first, independent fixtures, adversarial tests, CI green, independent review, then an automatic release) and ends with a case study on ebyte.org and a studio note under softdevstudio.com's 2.8 quick run.
+
+Phase 1: this plan, and a schema library: schemas/ with the WAV, BMP and one-file ZIP schemas from the case studies, their real samples and a round-trip test; a Schema Library page on ebyte.org linking them.
+Phase 2, 0.2.0: repeating blocks, bounded: repeat until end of input, and repeat while a tag field matches. Case study: a full WAV with a LIST chunk, or pcap.
+Phase 3, 0.3.0: derived sizes from a closed set (size_of a field or range, offset_of a field, plus a constant), so size-changing edits keep riff_size, file_size and ZIP offsets right. No general arithmetic.
+Phase 4, 0.4.0: declared checksums (CRC-32 first, then Adler-32 and CRC-16), verified on decode and computed on encode. Case study: PNG.
+Phase 5, 0.5.0: structural diff of two files through one schema. Case study: firmware or device export before and after.
+Phase 6, 0.6.0: floats (f32, f64), bit fields within a byte, jumps to a declared offset, and --output to a file on Windows once no-replace publication is verified there.
+Phase 7: a browser demo on ebyte.org: EByte compiled to WebAssembly in an iframe page under content, template untouched.
+
 ## Next
 
-Wait for YK's go-ahead. 1) Re-record test/results/latest with the pinned Go 1.27.3 toolchain when one is available. The next feature step is YK's decision; structural diff, arithmetic between fields, repeating blocks and checksums are the gaps the case studies ran into.
+Phase 1 is done when CI passes; then pause and wait for YK's go-ahead for phase 2 (repeating blocks, 0.2.0). Re-record test/results/latest with the pinned Go 1.27.3 toolchain when one is available.

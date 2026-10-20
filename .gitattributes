@@ -3,3 +3,5 @@
 *.exe -text
 *.zip -text
 *.gz -text
+*.wav -text
+*.bmp -text

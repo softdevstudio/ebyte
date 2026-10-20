@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "name": "bmp_24bit",
+  "endian": "little",
+  "fields": [
+    {"name": "signature", "type": "bytes", "length": 2, "expect": "424d"},
+    {"name": "file_size", "type": "u32"},
+    {"name": "reserved", "type": "bytes", "length": 4},
+    {"name": "pixel_offset", "type": "u32", "expect": "54"},
+    {"name": "header_size", "type": "u32", "expect": "40"},
+    {"name": "width", "type": "i32"},
+    {"name": "height", "type": "i32"},
+    {"name": "planes", "type": "u16", "expect": "1"},
+    {"name": "bits_per_pixel", "type": "u16", "expect": "24"},
+    {"name": "compression", "type": "u32", "expect": "0"},
+    {"name": "image_size", "type": "u32"},
+    {"name": "x_pixels_per_meter", "type": "i32"},
+    {"name": "y_pixels_per_meter", "type": "i32"},
+    {"name": "colors_used", "type": "u32"},
+    {"name": "colors_important", "type": "u32"},
+    {"name": "pixels", "type": "bytes", "length": {"field": "image_size"}}
+  ]
+}
