@@ -4,7 +4,7 @@ EByte is a binary schema engine in Go. Describe a format once, decode it to edit
 
 ## Current functionality
 
-EByte compiles bounded schemas, decodes binary input to editable values and field traces, and encodes validated documents through the Go library. The CLI provides validate-schema, decode, encode and inspect, including JSON/text traces and stdin/stdout. EByte is licensed under Apache License 2.0. Unchanged round trips are checked against independent byte fixtures and bounded fuzz tests.
+EByte compiles bounded schemas, decodes binary input to editable values and field traces, and encodes validated documents through the Go library. The CLI provides validate-schema, decode, encode, inspect and diff, including JSON/text traces and stdin/stdout. EByte is licensed under Apache License 2.0. Unchanged round trips are checked against independent byte fixtures and bounded fuzz tests.
 
 ```sh
 go build -o /tmp/ebyte ./cmd/ebyte
@@ -13,7 +13,7 @@ go build -o /tmp/ebyte ./cmd/ebyte
 bash scripts/record-results.sh
 ```
 
-Every command requires --schema FILE. Decode, encode and inspect also require --input FILE or --input - for stdin. Output defaults to stdout; --output FILE publishes a new file and refuses any existing destination. Schema validation completes before the binary/document input opens. See [CLI reference](docs/cli.md) for commands, limits, failure output and exit codes.
+Every command requires --schema FILE. Decode, encode and inspect also require --input FILE or --input - for stdin; diff takes --before and --after instead and exits 5 when the inputs differ. Output defaults to stdout; --output FILE publishes a new file and refuses any existing destination. Schema validation completes before the binary/document input opens. See [CLI reference](docs/cli.md) for commands, limits, failure output and exit codes.
 
 ```sh
 /tmp/ebyte validate-schema --schema testdata/packet.schema.json
@@ -92,18 +92,18 @@ The CLI publication helper stages a private 0600 file in an opened parent direct
 
 ## Contracts and fixtures
 
-Read [schema-v1](docs/schema-v1.md), [document-v1](docs/document-v1.md) and [errors-v1](docs/errors-v1.md). [Fixture reference](docs/fixtures.md) explains independently specified examples and expected failures. Fixed-width strings preserve embedded NUL and trailing spaces; raw byte fields preserve opaque data. Integers use decimal strings in editable JSON. Derived counts, sizes and offsets are absent from editable values and calculated by the encoder; inspection exposes the stored values, and decoding checks measured ones.
+Read [schema-v1](docs/schema-v1.md), [document-v1](docs/document-v1.md) and [errors-v1](docs/errors-v1.md). [diff-v1](docs/diff-v1.md) covers structural diff. [Fixture reference](docs/fixtures.md) explains independently specified examples and expected failures. Fixed-width strings preserve embedded NUL and trailing spaces; raw byte fields preserve opaque data. Integers use decimal strings in editable JSON. Derived counts, sizes and offsets are absent from editable values and calculated by the encoder; inspection exposes the stored values, and decoding checks measured ones.
 
-The supported subset is integers, ASCII/UTF-8 strings, bytes, counted arrays, repeating blocks (until end of input, or while a tag matches), derived counts, sizes, offsets and checksums (CRC-32, Adler-32, three CRC-16 variants) of siblings, and equality conditions on earlier integer siblings. An unchanged accepted input must round-trip exactly under identical schema bytes. An edit can change derived counts, sizes and offsets and move later fields; a stored size, offset or checksum that disagrees with the file fails decoding. There is no support for arbitrary expressions, seeks, recursive schemas, executable plugins, graphical editing or structural diff in v1. JSON output materializes bounded data and may be much larger than binary input.
+The supported subset is integers, ASCII/UTF-8 strings, bytes, counted arrays, repeating blocks (until end of input, or while a tag matches), derived counts, sizes, offsets and checksums (CRC-32, Adler-32, three CRC-16 variants) of siblings, and equality conditions on earlier integer siblings. An unchanged accepted input must round-trip exactly under identical schema bytes. An edit can change derived counts, sizes and offsets and move later fields; a stored size, offset or checksum that disagrees with the file fails decoding. There is no support for arbitrary expressions, seeks, recursive schemas, executable plugins, graphical editing, decompression or alignment of reordered list elements in a diff. JSON output materializes bounded data and may be much larger than binary input.
 
 ## Hardening and resource evidence
 
-[Testing reference](docs/testing.md) describes the independent fixtures, adversarial boundaries, nine fuzz targets and publication fault injection. The recorder also runs ten isolated resource cases and saves test/results/latest/resources.json. Cases cover raw fields through the exact 16 MiB binary ceiling, JSON escape expansion, 65536 empty array elements, the value-node ceiling, a lowered trace ceiling and rejection of a huge declared field before payload reads.
+[Testing reference](docs/testing.md) describes the independent fixtures, adversarial boundaries, ten fuzz targets and publication fault injection. The recorder also runs ten isolated resource cases and saves test/results/latest/resources.json. Cases cover raw fields through the exact 16 MiB binary ceiling, JSON escape expansion, 65536 empty array elements, the value-node ceiling, a lowered trace ceiling and rejection of a huge declared field before payload reads.
 
 Resource observations record actual document/trace sizes, bytes read, round-trip hashes, elapsed time, cumulative Go allocations and before/after heap snapshots. Fixture construction is outside the measured pipeline, but heap snapshots include live fixtures and compiled plans. Each case has one fresh-process sample. These are reproducible observations of a materialized pipeline, not peak RSS measurements, a fixed memory cap or a throughput guarantee. Large accepted files can cause several times their size in cumulative allocations. The internal resource runner is a test helper and is not a second shipped tool.
 
 ## Development and delivery
 
-CLAUDE.md is the only plan and handoff. AGENTS.md points to it. Follow the supplied chatgpt-project-standards.md. Linux/macOS CI runs formatting, vet, race tests, fixture checks, nine bounded fuzz runs, process-level CLI smoke, a saved compiled-binary demo and isolated resource observations; the recorder replaces test/results/latest. The release workflow runs after successful exact-source CI, builds five archives, verifies native binaries on Linux/macOS/Windows and checks every public tag/latest asset after publication. Linux arm64 and macOS amd64 archives are cross-built unless the corresponding host is available; release metadata records the actual verification for each archive.
+CLAUDE.md is the only plan and handoff. AGENTS.md points to it. Follow the supplied chatgpt-project-standards.md. Linux/macOS CI runs formatting, vet, race tests, fixture checks, ten bounded fuzz runs, process-level CLI smoke, a saved compiled-binary demo and isolated resource observations; the recorder replaces test/results/latest. The release workflow runs after successful exact-source CI, builds five archives, verifies native binaries on Linux/macOS/Windows and checks every public tag/latest asset after publication. Linux arm64 and macOS amd64 archives are cross-built unless the corresponding host is available; release metadata records the actual verification for each archive.
 
 The website is ebyte.org, built from https://github.com/photozeitgeist/ebyte.org.

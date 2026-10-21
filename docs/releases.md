@@ -1,6 +1,6 @@
 # EByte releases
 
-EByte v0.1.0 was the first implemented release under Apache License 2.0; v0.1.1 is a fix release, v0.2.0 adds repeating blocks, v0.3.0 adds derived sizes and offsets, and v0.4.0 adds checksums. Public release titles use EByte vX.Y.Z and archives have no version in their filenames. Linux amd64/arm64 and macOS amd64/arm64 use tar.gz; Windows amd64 uses zip. Each archive contains the CLI, manual, license/notice files, examples, release.json and GO-NOTICES from the exact building toolchain. No external Go modules are linked.
+EByte v0.1.0 was the first implemented release under Apache License 2.0; v0.1.1 is a fix release, v0.2.0 adds repeating blocks, v0.3.0 adds derived sizes and offsets, v0.4.0 adds checksums and v0.5.0 adds structural diff. Public release titles use EByte vX.Y.Z and archives have no version in their filenames. Linux amd64/arm64 and macOS amd64/arm64 use tar.gz; Windows amd64 uses zip. Each archive contains the CLI, manual, license/notice files, examples, release.json and GO-NOTICES from the exact building toolchain. No external Go modules are linked.
 
 Release waits for successful Linux/macOS CI on the same current main-push SHA. Workflow actions are pinned to commit SHAs and Python to 3.13, and post-publication API reads are authenticated when a token is available while asset downloads stay anonymous. Independent review is a session gate recorded in CLAUDE.md. Separate packaging jobs test the library and native CLI on Linux, macOS and Windows. Native binaries are checked again after extraction; the other architectures are explicitly cross-built and unexecuted. release.json and RELEASE-MANIFEST.json record actual host verification rather than implying every archive ran natively. A clean checkout and embedded Go VCS revision bind binaries to the tested source. Build candidates using --local are forbidden in Actions and rejected by the publication validator.
 
@@ -8,11 +8,18 @@ The final gate validates all five archives, project licenses, exact-toolchain no
 
 After publication, automation downloads every asset at the explicit tag and latest, compares hashes, checks the exact tag/source/name and executes a downloaded native CLI through schema validation, round trip, inspect, failure, limit and file-output behavior. Public verification is saved in one test/results/ebyte-{version}-release folder; latest/ remains the ordinary recorder output. Those checks do not constitute a signature or a general supply-chain guarantee.
 
-Windows supports file input and stdin/stdout but --output FILE publication deliberately fails closed. Linux/macOS file publication requires same-directory hard links and a trusted parent directory. Native smoke explicitly checks that distinction. There is no power-loss directory durability promise, no automatic format discovery and no structural diff or graphical editor in v1. Context checks cannot interrupt arbitrary blocked library I/O; full-pipeline allocation evidence is not a peak-memory or throughput guarantee.
+Windows supports file input and stdin/stdout but --output FILE publication deliberately fails closed. Linux/macOS file publication requires same-directory hard links and a trusted parent directory. Native smoke explicitly checks that distinction. There is no power-loss directory durability promise, no automatic format discovery and no graphical editor, and structural diff (since 0.5.0) matches list elements by position only. Context checks cannot interrupt arbitrary blocked library I/O; full-pipeline allocation evidence is not a peak-memory or throughput guarantee.
 
 ## Changes
 
 Release notes include the section for their own version from this list.
+
+### EByte v0.5.0
+
+- New command diff and Plan.Diff: two inputs decoded through one schema and compared field by field, with each side's offset and length, integer values, derived values marked, and the first differing byte of changed bytes and strings.
+- Arrays and repeats are compared by position; extra elements are added or removed.
+- diff exits 0 when the inputs are the same and 5 when they differ; a broken input is reported with which side failed.
+- A tenth fuzz target checks that accepted pairs differ exactly when their bytes do.
 
 ### EByte v0.4.0
 

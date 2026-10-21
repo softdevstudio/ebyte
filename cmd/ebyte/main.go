@@ -17,9 +17,10 @@ import (
 
 const helpText = `EByte
 Usage: ebyte COMMAND --schema FILE [--input FILE|-] [--output FILE|-]
-Commands: validate-schema, decode, encode, inspect
-inspect: --format json|text (default json)
+Commands: validate-schema, decode, encode, inspect, diff
+inspect, diff: --format json|text (default json)
 --input is required for decode, encode and inspect. --output defaults to stdout (-).
+diff: --before FILE|- --after FILE|- instead of --input; exit 5 when they differ.
 Schema files cannot use stdin. Output files must not already exist.
 Limits can only lower defaults: --max-schema-bytes, --max-schema-fields,
 --max-depth, --max-input-bytes, --max-output-bytes, --max-field-bytes,
@@ -32,6 +33,7 @@ var errUsage = errors.New("invalid command arguments")
 
 type options struct {
 	command, schema, input, output, format string
+	before, after                          string
 	limits                                 ebyte.Limits
 }
 
@@ -155,6 +157,23 @@ func runContext(ctx context.Context, args []string, in io.Reader, out, errOut io
 			SchemaSHA256  string `json:"schema_sha256"`
 			Valid         bool   `json:"valid"`
 		}{1, plan.Name(), plan.SchemaSHA256(), true}, opt.limits.MaxDocumentBytes)
+	} else if opt.command == "diff" {
+		var result *ebyte.DiffResult
+		result, e = runDiff(ctx, plan, opt, in)
+		var failed *ebyte.DiffError
+		if errors.As(e, &failed) {
+			return reportDiff(errOut, failed)
+		}
+		if e == nil {
+			if opt.format == "text" {
+				payload, e = textDiff(result, opt.limits.MaxTraceBytes)
+			} else {
+				payload, e = jsonOutput(result, opt.limits.MaxTraceBytes)
+			}
+		}
+		if e == nil && result.State == "different" {
+			operationError = errDifferent
+		}
 	} else {
 		reader, closeInput, openError := openInput(opt.input, in)
 		if openError != nil {
@@ -210,13 +229,16 @@ func runContext(ctx context.Context, args []string, in io.Reader, out, errOut io
 	if e != nil {
 		return reportContext(ctx, errOut, e)
 	}
+	if operationError == errDifferent {
+		return 5
+	}
 	if operationError != nil {
 		return reportContext(ctx, errOut, operationError)
 	}
 	return 0
 }
 func validCommand(s string) bool {
-	return s == "validate-schema" || s == "decode" || s == "encode" || s == "inspect"
+	return s == "validate-schema" || s == "decode" || s == "encode" || s == "inspect" || s == "diff"
 }
 func parseOptions(args []string) (options, error) {
 	opt := options{output: "-", format: "json", limits: ebyte.DefaultLimits()}
@@ -254,11 +276,23 @@ func parseOptions(args []string) (options, error) {
 		case "schema":
 			opt.schema = value
 		case "input":
+			if opt.command == "diff" {
+				return opt, errUsage
+			}
 			opt.input = value
+		case "before", "after":
+			if opt.command != "diff" {
+				return opt, errUsage
+			}
+			if key == "before" {
+				opt.before = value
+			} else {
+				opt.after = value
+			}
 		case "output":
 			opt.output = value
 		case "format":
-			if opt.command != "inspect" || (value != "json" && value != "text") {
+			if (opt.command != "inspect" && opt.command != "diff") || (value != "json" && value != "text") {
 				return opt, errUsage
 			}
 			opt.format = value
@@ -287,6 +321,10 @@ func parseOptions(args []string) (options, error) {
 	}
 	if opt.command == "validate-schema" {
 		if seen["input"] {
+			return opt, errUsage
+		}
+	} else if opt.command == "diff" {
+		if opt.before == "" || opt.after == "" || (opt.before == "-" && opt.after == "-") {
 			return opt, errUsage
 		}
 	} else if opt.input == "" {
@@ -466,4 +504,70 @@ func renderInspect(trace *ebyte.Trace, operationError error, render func(*ebyte.
 		return nil, operationError
 	}
 	return payload, e
+}
+
+// errDifferent marks a completed diff that found differences (exit 5).
+var errDifferent = errors.New("inputs differ")
+
+// runDiff opens both inputs, compares them and closes them again.
+func runDiff(ctx context.Context, plan *ebyte.Plan, opt options, stdin io.Reader) (*ebyte.DiffResult, error) {
+	before, closeBefore, e := openInput(opt.before, stdin)
+	if e != nil {
+		return nil, &ebyte.DiffError{Input: "before", Diagnostic: e.(*ebyte.Diagnostic)}
+	}
+	defer closeBefore()
+	after, closeAfter, e := openInput(opt.after, stdin)
+	if e != nil {
+		return nil, &ebyte.DiffError{Input: "after", Diagnostic: e.(*ebyte.Diagnostic)}
+	}
+	defer closeAfter()
+	return plan.Diff(ctx, before, after)
+}
+
+// reportDiff writes the failed input and its diagnostic as one JSON line and
+// returns the diagnostic's usual exit code.
+func reportDiff(w io.Writer, failed *ebyte.DiffError) int {
+	code := report(io.Discard, failed.Diagnostic)
+	raw, _ := json.Marshal(struct {
+		DiffVersion int               `json:"diff_version"`
+		Input       string            `json:"input"`
+		Diagnostic  *ebyte.Diagnostic `json:"diagnostic"`
+	}{1, failed.Input, failed.Diagnostic})
+	if e := writePayload(context.Background(), w, append(raw, '\n')); e != nil {
+		return 1
+	}
+	return code
+}
+
+func textDiff(result *ebyte.DiffResult, limit int) ([]byte, error) {
+	counts := map[string]int{}
+	for _, c := range result.Changes {
+		counts[c.Change]++
+	}
+	b := limitedBuffer{limit: limit}
+	if _, e := fmt.Fprintf(&b, "EByte diff state=%s schema_sha256=%s size_before=%d size_after=%d changed=%d added=%d removed=%d\n", result.State, result.SchemaSHA256, result.SizeBefore, result.SizeAfter, counts["changed"], counts["added"], counts["removed"]); e != nil {
+		return nil, e
+	}
+	side := func(name string, s *ebyte.Span) string {
+		if s == nil {
+			return name + "=-"
+		}
+		return fmt.Sprintf("%s=%d+%d", name, s.Offset, s.Length)
+	}
+	for _, c := range result.Changes {
+		line := fmt.Sprintf("%s %s %s %s %s", c.Change, strconv.Quote(c.Path), c.Kind, side("a", c.Before), side("b", c.After))
+		if c.Before != nil && c.After != nil && c.Before.Value != nil && c.After.Value != nil {
+			line += " value=" + *c.Before.Value + "->" + *c.After.Value
+		}
+		if c.FirstDifference != nil {
+			line += " first_difference=" + strconv.FormatInt(*c.FirstDifference, 10)
+		}
+		if c.Derived {
+			line += " derived"
+		}
+		if _, e := b.Write([]byte(line + "\n")); e != nil {
+			return nil, e
+		}
+	}
+	return b.data, nil
 }

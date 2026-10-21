@@ -10,6 +10,8 @@ Plan.LoadDocument(ctx, rawJSON []byte) returns (*Document, error), strictly pars
 
 Document.Values is map[string]any. Integers are canonical decimal strings, bytes are lowercase hex strings, text is valid exact-width ASCII/UTF-8, arrays are non-nil []any containing non-nil map[string]any objects. Empty values are allowed when declared; nil/null is not a replacement for absence. Derived counts and inactive conditional fields must be omitted. Returned documents/traces belong to the caller and may be edited, but must not be modified concurrently with use or serialization.
 
+Plan.Diff(ctx, before, after io.Reader) returns (*DiffResult, error): both inputs are decoded completely, then compared field by field (docs/diff-v1.md). A decode failure is a *DiffError naming the input, which unwraps to its *Diagnostic.
+
 Errors are *Diagnostic and can be found with errors.As. Code/stage/path and nullable offset/field_start are specified in errors-v1.md; never infer unknown offsets from zero. Trace entries disclose observed integers but no raw byte/string values. Known encode assertion/ASCII positions refer to prepared bytes, not a guarantee that output was written. Default diagnostics do not include arbitrary reader/writer error text or filenames.
 
 Pass non-nil contexts and readers/writers obeying Go's I/O contracts. Cancellation checks cannot interrupt arbitrary blocked library Read/Write calls. The CLI adds process-level stdin interruption and file staging; the library makes no atomic-publication guarantee for a supplied writer. JSON output materializes in bounded memory and may allocate many times the binary input size across a complete pipeline. See schema-v1.md, document-v1.md, errors-v1.md and testing.md for exact bounds and evidence.
