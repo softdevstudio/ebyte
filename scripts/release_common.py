@@ -11,7 +11,7 @@ import zipfile
 REPO = 'softdevstudio/ebyte'
 ASSETS = {'ebyte-linux-amd64.tar.gz', 'ebyte-linux-arm64.tar.gz',
           'ebyte-darwin-amd64.tar.gz', 'ebyte-darwin-arm64.tar.gz',
-          'ebyte-windows-amd64.zip', 'RELEASE-MANIFEST.json', 'SHA256SUMS'}
+          'ebyte-windows-amd64.zip', 'ebyte-wasm.zip', 'RELEASE-MANIFEST.json', 'SHA256SUMS'}
 
 
 class SafeRedirect(urllib.request.HTTPRedirectHandler):

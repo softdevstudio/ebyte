@@ -57,17 +57,40 @@ for item in items:
         build = subprocess.check_output(['go', 'version', '-m', str(binary)]).decode()
         assert 'go1.27.3' in build and 'vcs.revision=' + revision in build and 'vcs.modified=false' in build
         assert 'GOOS=' + metadata['goos'] in build and 'GOARCH=' + metadata['goarch'] in build
+# The WebAssembly build: same source, toolchain and licences, Node smoke passed.
+wasm = json.loads((dist / 'manifest-wasm.json').read_text())
+meta = wasm['metadata']
+assert wasm['archive'] == 'ebyte-wasm.zip' and wasm['wasm_smoke'] == {'wasm_smoke': 'passed', 'version': version}
+assert meta['version'] == version and meta['source_sha'] == revision and not meta['source_dirty'] and meta['go_version'] == 'go1.27.3'
+packed_wasm = dist / 'ebyte-wasm.zip'
+assert hashlib.sha256(packed_wasm.read_bytes()).hexdigest() == wasm['sha256']
+with tempfile.TemporaryDirectory() as temporary:
+    target = Path(temporary)
+    with zipfile.ZipFile(packed_wasm) as packed:
+        for info in packed.infolist():
+            assert info.filename.startswith('ebyte/') and '..' not in info.filename.split('/') and '\\' not in info.filename
+        packed.extractall(target)
+    content = target / 'ebyte'
+    assert json.loads((content / 'release.json').read_text()) == meta
+    for name in ('LICENSE', 'NOTICE', 'THIRD_PARTY_LICENSES.md'):
+        assert (content / name).read_bytes() == (root / name).read_bytes()
+    assert hashlib.sha256((content / 'ebyte.wasm').read_bytes()).hexdigest() == meta['wasm_sha256']
+    assert hashlib.sha256((content / 'wasm_exec.js').read_bytes()).hexdigest() == meta['wasm_exec_sha256']
+    for name, digest in meta['go_notices'].items():
+        assert not Path(name).is_absolute() and '..' not in Path(name).parts
+        assert hashlib.sha256((content / 'GO-NOTICES' / name).read_bytes()).hexdigest() == digest
 # Three distinct native hosts must have exercised their own archive.
 for family in ('linux', 'darwin', 'windows'):
     assert sum(item['metadata']['native_tested'] for item in items if item['metadata']['goos'] == family) == 1
-manifest = {'version': version, 'source_sha': revision, 'archives': sorted(items, key=lambda item: item['archive'])}
+manifest = {'version': version, 'source_sha': revision, 'archives': sorted(items, key=lambda item: item['archive']), 'wasm': wasm}
 (dist / 'RELEASE-MANIFEST.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
-files = sorted(expected | {'RELEASE-MANIFEST.json'})
+files = sorted(expected | {'ebyte-wasm.zip', 'RELEASE-MANIFEST.json'})
 (dist / 'SHA256SUMS').write_text(''.join(hashlib.sha256((dist / name).read_bytes()).hexdigest() + '  ' + name + '\n' for name in files), encoding='utf-8')
 lines = ['EByte ' + version, '', 'Apache License 2.0. One schema for decoding, editing, encoding and field inspection.', '',
          'Source commit: ' + revision, '', 'Archive verification:']
 for item in manifest['archives']:
     lines.append('- ' + item['archive'] + ': ' + item['metadata']['verification'])
+lines.append('- ebyte-wasm.zip: ' + meta['verification'])
 changes = re.search(r'^### EByte v' + re.escape(version) + r'\n(.*?)(?=^### |\Z)',
                     (root / 'docs' / 'releases.md').read_text(encoding='utf-8'), re.M | re.S)
 if changes and changes.group(1).strip():
@@ -75,7 +98,7 @@ if changes and changes.group(1).strip():
 lines.extend(['', 'File publication with --output FILE works on Linux, macOS and Windows and requires hard links and a trusted output directory.',
               'Blocking filesystem calls may delay cancellation.',
               'Documents, traces and encoded output materialize in bounded memory. Allocation totals are not peak memory or throughput guarantees.',
-              'Structural diff, automatic format discovery and graphical editing are outside v1.', '',
+              'Automatic format discovery, decompression and graphical editing are outside EByte.', '',
               'Each archive includes examples, Apache LICENSE/NOTICE, exact-toolchain GO-NOTICES and release.json. Verify downloads with SHA256SUMS.'])
 (dist / 'release-notes.md').write_text('\n'.join(lines) + '\n', encoding='utf-8')
-print('PASS: five archives, exact source/build metadata, licenses/notices and three native smoke results')
+print('PASS: five archives and the WebAssembly build, exact source/build metadata, licenses/notices, three native smoke results and a Node smoke')

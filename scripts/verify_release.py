@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -80,8 +81,20 @@ def verify(version, revision, output):
         assert 'vcs.revision=' + revision in build and 'vcs.modified=false' in build
         smoke = subprocess.check_output([sys.executable, str(root / 'scripts/release_smoke.py'), str(binary), version])
         evidence['downloaded_native_smoke'] = json.loads(smoke)
+        wasm = manifest['wasm']
+        wasm_zip = downloads['ebyte-wasm.zip']
+        assert hashlib.sha256(wasm_zip.read_bytes()).hexdigest() == wasm['sha256']
+        wasm_dir = work / 'wasm'
+        wasm_dir.mkdir()
+        unpack(wasm_zip, wasm_dir)
+        assert hashlib.sha256((wasm_dir / 'ebyte' / 'ebyte.wasm').read_bytes()).hexdigest() == wasm['metadata']['wasm_sha256']
+        if shutil.which('node'):
+            node = subprocess.check_output(['node', str(root / 'scripts/wasm_smoke.mjs'), str(wasm_dir / 'ebyte'), version])
+            evidence['downloaded_wasm_smoke'] = json.loads(node)
+        else:
+            evidence['downloaded_wasm_smoke'] = None
     output.write_text(json.dumps(evidence, indent=2) + '\n', encoding='utf-8')
-    print('PASS: all seven assets checked at tag and latest; downloaded native binary smoke passed')
+    print('PASS: all ' + str(len(ASSETS)) + ' assets checked at tag and latest; downloaded native binary and WebAssembly smoke passed')
     return evidence
 
 

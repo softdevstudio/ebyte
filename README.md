@@ -24,7 +24,7 @@ The built-binary demo starts with the independently specified 21-byte packet, de
 
 ## Downloads and license
 
-Get binaries from [GitHub Releases](https://github.com/softdevstudio/ebyte/releases/latest). Archive names are ebyte-linux-amd64.tar.gz, ebyte-linux-arm64.tar.gz, ebyte-darwin-amd64.tar.gz, ebyte-darwin-arm64.tar.gz and ebyte-windows-amd64.zip. Verify them with SHA256SUMS. The release manifest records the source commit, building Go version, archive/binary hashes and native versus cross-build checks. Since 0.6.0 --output FILE also works on Windows (NTFS); filesystems without hard links fail closed. [Release reference](docs/releases.md) explains packaging and limitations.
+Get binaries from [GitHub Releases](https://github.com/softdevstudio/ebyte/releases/latest). Archive names are ebyte-linux-amd64.tar.gz, ebyte-linux-arm64.tar.gz, ebyte-darwin-amd64.tar.gz, ebyte-darwin-arm64.tar.gz and ebyte-windows-amd64.zip. Verify them with SHA256SUMS. The release manifest records the source commit, building Go version, archive/binary hashes and native versus cross-build checks. Since 0.6.0 --output FILE also works on Windows (NTFS); filesystems without hard links fail closed. Since 0.7.0 ebyte-wasm.zip carries a WebAssembly build for browsers; see [wasm](docs/wasm.md). [Release reference](docs/releases.md) explains packaging and limitations.
 
 The code is licensed under [Apache License 2.0](LICENSE). Archives include the project NOTICE and exact-toolchain GO-NOTICES for components retaining their own licenses.
 

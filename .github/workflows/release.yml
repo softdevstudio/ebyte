@@ -58,6 +58,10 @@ jobs:
       - run: python scripts/package.py ${{ matrix.family }}
         env:
           EBYTE_RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
+      - if: matrix.family == 'linux'
+        run: python scripts/package_wasm.py
+        env:
+          EBYTE_RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: package-${{ matrix.family }}

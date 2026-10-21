@@ -47,4 +47,7 @@ python3 scripts/smoke.py "$build_dir/ebyte"
 python3 scripts/demo.py "$build_dir/ebyte" test/results/latest/demo.json
 go build -o "$build_dir/resourcecheck" ./internal/resourcecheck
 python3 scripts/resources.py "$build_dir/resourcecheck" test/results/latest/resources.json
-printf 'PASS: formatting, vet, race, independent fixture/decoder oracles, eleven bounded fuzz targets, build and operational CLI smoke and saved round-trip demo and resource observations\n'
+GOOS=js GOARCH=wasm go build -trimpath -ldflags='-s -w' -o "$build_dir/ebyte.wasm" ./cmd/ebyte-wasm
+cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" "$build_dir/wasm_exec.js"
+node scripts/wasm_smoke.mjs "$build_dir" "$(sed -n 's/.*Version = "\(.*\)"/\1/p' version.go)"
+printf 'PASS: formatting, vet, race, independent fixture/decoder oracles, eleven bounded fuzz targets, build and operational CLI smoke, WebAssembly smoke and saved round-trip demo and resource observations\n'
