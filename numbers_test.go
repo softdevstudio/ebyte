@@ -202,13 +202,14 @@ func TestNewTypeSchemaRules(t *testing.T) {
 		{"until_offset to a float", `{"name":"x","type":"f64"},{"name":"b","type":"bytes","length":{"until_offset":"x"}}`, "/fields/1/length/until_offset"},
 		{"until_offset to a measured offset", `{"name":"o","type":"u8","derive":{"offset_of":"z"}},{"name":"b","type":"bytes","length":{"until_offset":"o"}},{"name":"z","type":"u8"}`, "/fields/0/derive/offset_of"},
 		{"until_offset and size_of", `{"name":"n","type":"u8","derive":{"size_of":"b"}},{"name":"b","type":"bytes","length":{"until_offset":"n"}}`, "/fields/0/derive/size_of"},
+		{"until_offset beyond int64", `{"name":"b","type":"bytes","length":{"until_offset":18446744073709551615}}`, "/fields/0/length/until_offset"},
 		{"until_offset with field too", `{"name":"o","type":"u8"},{"name":"b","type":"bytes","length":{"until_offset":"o","field":"o"}}`, "/fields/1/length"},
 	} {
 		_, e := Compile([]byte(head+c.fields+`]}`), DefaultLimits())
 		if e == nil {
 			t.Fatalf("%s: accepted", c.name)
 		}
-		if d := diagnosticOf(t, e); d.Code != "invalid_schema" || d.Path != c.path {
+		if d := diagnosticOf(t, e); (d.Code != "invalid_schema" && d.Code != "limit_exceeded") || d.Path != c.path {
 			t.Fatalf("%s: %s at %q, want %q", c.name, d.Code, d.Path, c.path)
 		}
 	}

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"regexp"
 	"strconv"
 	"strings"
@@ -373,7 +374,7 @@ func dim(v any, prior []field, path string, cap int) (dimension, error) {
 				return dimension{}, failure("invalid_schema", path+"/until_offset")
 			}
 			u, e := strconv.ParseUint(n.String(), 10, 64)
-			if e != nil {
+			if e != nil || u > math.MaxInt64 {
 				return dimension{}, failure("limit_exceeded", path+"/until_offset")
 			}
 			return dimension{literal: u, toOffset: true}, nil

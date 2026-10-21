@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/softdevstudio/ebyte"
 )
@@ -65,6 +66,11 @@ func validDestination(destination string) bool {
 		return false
 	}
 	name := filepath.Base(destination)
+	// On Windows "name:stream" addresses an alternate data stream of another
+	// file; a new file name never contains a colon there.
+	if runtime.GOOS == "windows" && strings.Contains(name, ":") {
+		return false
+	}
 	return name != "." && name != ".." && !os.IsPathSeparator(name[0])
 }
 
