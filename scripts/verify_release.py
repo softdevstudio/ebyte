@@ -89,12 +89,15 @@ def verify(version, revision, output):
         unpack(wasm_zip, wasm_dir)
         assert hashlib.sha256((wasm_dir / 'ebyte' / 'ebyte.wasm').read_bytes()).hexdigest() == wasm['metadata']['wasm_sha256']
         if shutil.which('node'):
-            node = subprocess.check_output(['node', str(root / 'scripts/wasm_smoke.mjs'), str(wasm_dir / 'ebyte'), version])
+            node = subprocess.check_output(['node', str(root / 'scripts/wasm_smoke.mjs'), str(wasm_dir / 'ebyte'), version, revision, 'go1.27.3'])
             evidence['downloaded_wasm_smoke'] = json.loads(node)
         else:
+            # Release automation must run the browser build, not skip it.
+            assert os.environ.get('GITHUB_ACTIONS') != 'true', 'node is required to verify ebyte-wasm.zip'
             evidence['downloaded_wasm_smoke'] = None
     output.write_text(json.dumps(evidence, indent=2) + '\n', encoding='utf-8')
-    print('PASS: all ' + str(len(ASSETS)) + ' assets checked at tag and latest; downloaded native binary and WebAssembly smoke passed')
+    wasm_note = 'WebAssembly smoke passed' if evidence['downloaded_wasm_smoke'] else 'WebAssembly smoke skipped (no node)'
+    print('PASS: all ' + str(len(ASSETS)) + ' assets checked at tag and latest; downloaded native binary smoke passed; ' + wasm_note)
     return evidence
 
 

@@ -84,6 +84,12 @@ func TestWebEnvelopes(t *testing.T) {
 	if e := parse(t, Diff(ctx, schema, packet, packet[:16])); e.OK || e.Input != "after" || e.Diagnostic.Code != "truncated_input" {
 		t.Fatalf("diff failure %+v", e)
 	}
+	if e := parse(t, Usage("a string argument")); e.OK || e.Diagnostic.Code != "invalid_argument" || e.Schema != nil {
+		t.Fatalf("usage %+v", e)
+	}
+	if e := parse(t, TooLarge()); e.OK || e.Diagnostic.Code != "limit_exceeded" {
+		t.Fatalf("too large %+v", e)
+	}
 	cancelled, cancel := context.WithCancel(ctx)
 	cancel()
 	if e := parse(t, Decode(cancelled, schema, packet)); e.OK || e.Diagnostic.Code != "cancelled" {

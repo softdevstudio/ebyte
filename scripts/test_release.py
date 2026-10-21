@@ -83,6 +83,45 @@ class ReleaseSafetyTests(unittest.TestCase):
         self.assertEqual(len(seen), 2)
         self.assertEqual(release_common.releases_for('0.2.0', fetch), [])
 
+    def wasm_case(self, dist, tamper=None):
+        root = Path(__file__).resolve().parents[1]
+        revision = 'b' * 40
+        wasm, glue, notice = b'\0asm fake', b'// glue', b'go licence'
+        meta = {'version': '0.7.0', 'source_sha': revision, 'source_dirty': False, 'go_version': 'go1.27.3',
+                'goos': 'js', 'goarch': 'wasm', 'wasm_sha256': hashlib.sha256(wasm).hexdigest(),
+                'wasm_exec_sha256': hashlib.sha256(glue).hexdigest(), 'verification': 'Node smoke passed',
+                'go_notices': {'LICENSE': hashlib.sha256(notice).hexdigest()}}
+        files = {'ebyte/ebyte.wasm': wasm, 'ebyte/wasm_exec.js': glue, 'ebyte/GO-NOTICES/LICENSE': notice,
+                 'ebyte/release.json': json.dumps(meta).encode()}
+        for name in ('LICENSE', 'NOTICE', 'THIRD_PARTY_LICENSES.md'):
+            files['ebyte/' + name] = (root / name).read_bytes()
+        if tamper == 'wasm':
+            files['ebyte/ebyte.wasm'] = b'\0asm other'
+        with zipfile.ZipFile(dist / 'ebyte-wasm.zip', 'w') as packed:
+            for name, data in files.items():
+                packed.writestr(name, data)
+        build = {'go_version': 'go1.27.3', 'GOOS': 'js', 'GOARCH': 'wasm', 'vcs.revision': revision, 'vcs.modified': 'false'}
+        if tamper == 'modified':
+            build['vcs.modified'] = 'true'
+        entry = {'archive': 'ebyte-wasm.zip', 'sha256': hashlib.sha256((dist / 'ebyte-wasm.zip').read_bytes()).hexdigest(),
+                 'metadata': meta, 'wasm_smoke': {'wasm_smoke': 'passed', 'version': '0.7.0', 'build': build}}
+        if tamper == 'archive':
+            entry['sha256'] = '0' * 64
+        (dist / 'manifest-wasm.json').write_text(json.dumps(entry))
+        return release_common.check_wasm(dist, '0.7.0', revision, root, b'// other glue' if tamper == 'glue' else glue)
+
+    def test_wasm_check_accepts_a_consistent_build_and_refuses_tampering(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            self.assertEqual(self.wasm_case(Path(temporary))['archive'], 'ebyte-wasm.zip')
+        for tamper in ('wasm', 'glue', 'modified', 'archive'):
+            with self.subTest(tamper=tamper), tempfile.TemporaryDirectory() as temporary:
+                with self.assertRaises(AssertionError):
+                    self.wasm_case(Path(temporary), tamper)
+
+    def test_wasm_smoke_skip_is_refused_in_actions(self):
+        source = (Path(__file__).resolve().parent / 'verify_release.py').read_text()
+        self.assertIn("os.environ.get('GITHUB_ACTIONS') != 'true', 'node is required", source)
+
     def publish_case(self, failure, listing=()):
         listing = list(listing)
         script = Path(__file__).resolve().parent / 'publish_release.py'

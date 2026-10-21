@@ -80,3 +80,37 @@ def releases_for(version, fetch=None, max_pages=10):
         if len(batch) < 100:
             return found
     raise RuntimeError('release listing longer than expected; refusing to guess')
+
+
+def check_wasm(dist, version, revision, root, wasm_exec):
+    """Verify the packed WebAssembly build against its manifest entry.
+
+    wasm_exec is the bytes of the checking toolchain's own wasm_exec.js, which
+    the packed copy must equal. Returns the manifest entry.
+    """
+    import hashlib
+    import tempfile
+    wasm = json.loads((dist / 'manifest-wasm.json').read_text())
+    meta = wasm['metadata']
+    assert wasm['archive'] == 'ebyte-wasm.zip'
+    smoke = wasm['wasm_smoke']
+    assert smoke['wasm_smoke'] == 'passed' and smoke['version'] == version
+    assert smoke['build'] == {'go_version': 'go1.27.3', 'GOOS': 'js', 'GOARCH': 'wasm', 'vcs.revision': revision, 'vcs.modified': 'false'}
+    assert meta['version'] == version and meta['source_sha'] == revision and not meta['source_dirty'] and meta['go_version'] == 'go1.27.3'
+    packed_wasm = dist / 'ebyte-wasm.zip'
+    assert hashlib.sha256(packed_wasm.read_bytes()).hexdigest() == wasm['sha256']
+    with tempfile.TemporaryDirectory() as temporary:
+        target = Path(temporary)
+        unpack(packed_wasm, target)
+        content = target / 'ebyte'
+        assert json.loads((content / 'release.json').read_text()) == meta
+        for name in ('LICENSE', 'NOTICE', 'THIRD_PARTY_LICENSES.md'):
+            assert (content / name).read_bytes() == (root / name).read_bytes()
+        assert hashlib.sha256((content / 'ebyte.wasm').read_bytes()).hexdigest() == meta['wasm_sha256']
+        assert (content / 'wasm_exec.js').read_bytes() == wasm_exec
+        assert hashlib.sha256(wasm_exec).hexdigest() == meta['wasm_exec_sha256']
+        assert 'LICENSE' in meta['go_notices']
+        for name, digest in meta['go_notices'].items():
+            assert not Path(name).is_absolute() and '..' not in Path(name).parts
+            assert hashlib.sha256((content / 'GO-NOTICES' / name).read_bytes()).hexdigest() == digest
+    return wasm

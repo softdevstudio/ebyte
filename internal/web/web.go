@@ -49,6 +49,16 @@ func failed(info *SchemaInfo, input string, err error) string {
 	return marshal(Envelope{Schema: info, Input: input, Diagnostic: d})
 }
 
+// Usage reports a call whose arguments the browser build can't use.
+func Usage(expected string) string {
+	return marshal(Envelope{Diagnostic: &ebyte.Diagnostic{DiagnosticVersion: 1, Stage: "io", Code: "invalid_argument", Expected: expected, Observed: "unusable call arguments"}})
+}
+
+// TooLarge reports an input over the default input ceiling before it is copied.
+func TooLarge() string {
+	return marshal(Envelope{Diagnostic: &ebyte.Diagnostic{DiagnosticVersion: 1, Stage: "io", Code: "limit_exceeded", Expected: "within configured resource ceilings", Observed: "input exceeds the byte ceiling"}})
+}
+
 func compile(schema string) (*ebyte.Plan, *SchemaInfo, error) {
 	plan, err := ebyte.Compile([]byte(schema), ebyte.DefaultLimits())
 	if err != nil {
@@ -75,7 +85,9 @@ func Inspect(ctx context.Context, schema string, input []byte) string {
 	trace, err := plan.Inspect(ctx, bytes.NewReader(input))
 	if err != nil {
 		var d *ebyte.Diagnostic
-		errors.As(err, &d)
+		if !errors.As(err, &d) {
+			d = &ebyte.Diagnostic{DiagnosticVersion: 1, Stage: "io", Code: "read_failed", Expected: "complete operation", Observed: "operation failed"}
+		}
 		return marshal(Envelope{Schema: info, Result: trace, Diagnostic: d})
 	}
 	return marshal(Envelope{OK: true, Schema: info, Result: trace})

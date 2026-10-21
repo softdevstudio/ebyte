@@ -47,7 +47,8 @@ with tempfile.TemporaryDirectory() as temporary:
     env.update(GOOS='js', GOARCH='wasm', CGO_ENABLED='0')
     subprocess.run(['go', 'build', '-trimpath', '-buildvcs=true', '-ldflags=-s -w', '-o', str(content / 'ebyte.wasm'), './cmd/ebyte-wasm'], cwd=root, env=env, check=True)
     shutil.copyfile(goroot / 'lib' / 'wasm' / 'wasm_exec.js', content / 'wasm_exec.js')
-    smoke = json.loads(command(['node', 'scripts/wasm_smoke.mjs', str(content), version]))
+    expect = [] if args.local else [revision, goversion]
+    smoke = json.loads(command(['node', 'scripts/wasm_smoke.mjs', str(content), version, *expect]))
     for name in ('LICENSE', 'NOTICE', 'THIRD_PARTY_LICENSES.md'):
         shutil.copyfile(root / name, content / name)
     shutil.copyfile(root / 'docs' / 'wasm.md', content / 'WASM.md')
@@ -73,7 +74,7 @@ with tempfile.TemporaryDirectory() as temporary:
         archive.extractall(extracted)
     packed = extracted / 'ebyte'
     assert hashlib.sha256((packed / 'ebyte.wasm').read_bytes()).hexdigest() == metadata['wasm_sha256']
-    command(['node', 'scripts/wasm_smoke.mjs', str(packed), version])
+    command(['node', 'scripts/wasm_smoke.mjs', str(packed), version, *expect])
 item = {'archive': 'ebyte-wasm.zip', 'sha256': hashlib.sha256(destination.read_bytes()).hexdigest(), 'metadata': metadata, 'wasm_smoke': smoke}
 (out / 'manifest-wasm.json').write_text(json.dumps(item, indent=2) + '\n', encoding='utf-8')
 print(json.dumps({'archive': 'ebyte-wasm.zip', 'wasm_smoke': smoke['wasm_smoke']}))
