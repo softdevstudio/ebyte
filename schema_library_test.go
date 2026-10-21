@@ -16,6 +16,7 @@ func TestSchemaLibrarySamples(t *testing.T) {
 		"zip-one-stored-file": "one.zip",
 		"riff-wave":           "tagged.wav",
 		"zip":                 "three.zip",
+		"png":                 "stripes.png",
 	}
 	entries, e := os.ReadDir("schemas")
 	if e != nil {

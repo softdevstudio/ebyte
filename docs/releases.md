@@ -1,6 +1,6 @@
 # EByte releases
 
-EByte v0.1.0 was the first implemented release under Apache License 2.0; v0.1.1 is a fix release, v0.2.0 adds repeating blocks, and v0.3.0 adds derived sizes and offsets. Public release titles use EByte vX.Y.Z and archives have no version in their filenames. Linux amd64/arm64 and macOS amd64/arm64 use tar.gz; Windows amd64 uses zip. Each archive contains the CLI, manual, license/notice files, examples, release.json and GO-NOTICES from the exact building toolchain. No external Go modules are linked.
+EByte v0.1.0 was the first implemented release under Apache License 2.0; v0.1.1 is a fix release, v0.2.0 adds repeating blocks, v0.3.0 adds derived sizes and offsets, and v0.4.0 adds checksums. Public release titles use EByte vX.Y.Z and archives have no version in their filenames. Linux amd64/arm64 and macOS amd64/arm64 use tar.gz; Windows amd64 uses zip. Each archive contains the CLI, manual, license/notice files, examples, release.json and GO-NOTICES from the exact building toolchain. No external Go modules are linked.
 
 Release waits for successful Linux/macOS CI on the same current main-push SHA. Workflow actions are pinned to commit SHAs and Python to 3.13, and post-publication API reads are authenticated when a token is available while asset downloads stay anonymous. Independent review is a session gate recorded in CLAUDE.md. Separate packaging jobs test the library and native CLI on Linux, macOS and Windows. Native binaries are checked again after extraction; the other architectures are explicitly cross-built and unexecuted. release.json and RELEASE-MANIFEST.json record actual host verification rather than implying every archive ran natively. A clean checkout and embedded Go VCS revision bind binaries to the tested source. Build candidates using --local are forbidden in Actions and rejected by the publication validator.
 
@@ -13,6 +13,13 @@ Windows supports file input and stdin/stdout but --output FILE publication delib
 ## Changes
 
 Release notes include the section for their own version from this list.
+
+### EByte v0.4.0
+
+- derive gains checksum: crc32, adler32, crc16_arc, crc16_modbus or crc16_xmodem over one sibling or a from/to range, in an integer of exactly the algorithm's width.
+- Decoding hashes the range as it reads and reports checksum_mismatch at a stale checksum; encoding writes checksums after the sizes and offsets in their range.
+- Schema library: png.schema.json reads every PNG chunk and derives each length and CRC-32; the one-file stored ZIP schema now derives both CRC-32 copies and every size and offset.
+- A ninth fuzz target checks chunk lengths and CRCs against hash/crc32.
 
 ### EByte v0.3.0
 

@@ -359,6 +359,10 @@ func TestRepeatLibrarySamples(t *testing.T) {
 	if got := list("zip.schema.json", "three.zip", "central_directory", "name"); !reflect.DeepEqual(got, names) {
 		t.Fatalf("zip directory %q", got)
 	}
+	// Pillow wrote these chunks, in this order, for the sample image.
+	if got := list("png.schema.json", "stripes.png", "chunks", "type"); !reflect.DeepEqual(got, []string{"IHDR", "tEXt", "pHYs", "IDAT", "IEND"}) {
+		t.Fatalf("png chunks %q", got)
+	}
 }
 
 type unexpectedEOFReader struct{ data []byte }

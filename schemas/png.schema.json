@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "name": "png",
+  "endian": "big",
+  "fields": [
+    {"name": "signature", "type": "bytes", "length": 8, "expect": "89504e470d0a1a0a"},
+    {"name": "chunks", "type": "repeat", "until": "end_of_input", "fields": [
+      {"name": "length", "type": "u32", "derive": {"size_of": "data"}},
+      {"name": "type", "type": "string", "encoding": "ascii", "length": 4},
+      {"name": "data", "type": "bytes", "length": {"field": "length"}},
+      {"name": "crc", "type": "u32", "derive": {"checksum": "crc32", "of": {"from": "type", "to": "data"}}}
+    ]}
+  ]
+}

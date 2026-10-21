@@ -400,11 +400,28 @@ func (e *encoder) object(fields []field, m map[string]any, path string) error {
 		}
 		ends[i] = int64(len(e.out))
 	}
+	// Sizes, offsets and counts first, then checksums over the final bytes.
+	for _, wantChecksum := range []bool{false, true} {
+		if err := e.patch(fields, m, starts, ends, path, wantChecksum); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// patch writes measured integers over their placeholders: either every
+// checksum or every other measured form.
+func (e *encoder) patch(fields []field, m map[string]any, starts, ends []int64, path string, checksums bool) error {
 	for i, f := range fields {
-		if f.measure == nil {
+		if f.measure == nil || (f.measure.kind == "checksum") != checksums {
 			continue
 		}
 		s := measured(f.measure, starts, ends, m, fields)
+		if checksums {
+			h := newChecksum(f.measure.algorithm)
+			_, _ = h.Write(e.out[starts[f.measure.from]:ends[f.measure.to]])
+			s = strconv.FormatUint(uint64(h.Sum32()), 10)
+		}
 		if s == "" || !fits(s, f.kind) {
 			return encodePosition("value_out_of_range", path+"/"+f.name, int(starts[i]), int(starts[i]))
 		}

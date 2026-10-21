@@ -49,6 +49,8 @@ type decoder struct {
 	docBytes   int
 	traceBytes int
 	trace      Trace
+	// active checksums receive every byte read while their range is open.
+	active []checksum
 }
 
 // Decode reads one complete binary representation. It returns no document on any
@@ -164,13 +166,37 @@ func (d *decoder) object(fields []field, path string) (values map[string]any, er
 	observed := make([]string, len(fields))
 	// Field spans and trace entries, for checking measured integers at the end.
 	starts, ends, entries := make([]int64, len(fields)), make([]int64, len(fields)), make([]int, len(fields))
+	// Checksums over sibling ranges hash bytes as they are read.
+	sums := make([]checksum, len(fields))
+	open := func(i int) {
+		for c, f := range fields {
+			if f.measure != nil && f.measure.kind == "checksum" && f.measure.from == i {
+				sums[c] = newChecksum(f.measure.algorithm)
+				d.active = append(d.active, sums[c])
+			}
+		}
+	}
+	shut := func(i int) {
+		for c, f := range fields {
+			if f.measure != nil && f.measure.kind == "checksum" && f.measure.to == i {
+				for k, h := range d.active {
+					if h == sums[c] {
+						d.active = append(d.active[:k], d.active[k+1:]...)
+						break
+					}
+				}
+			}
+		}
+	}
 	for i, f := range fields {
 		fieldPath := path + "/" + f.name
 		starts[i], ends[i] = d.pos, d.pos
+		open(i)
 		if e = d.cancel(fieldPath, &d.pos); e != nil {
 			return nil, e
 		}
 		if f.when != nil && observed[f.when.ref] != f.when.equals {
+			shut(i)
 			continue
 		}
 		// Count the member name, colon and separator before allocating its value.
@@ -190,6 +216,7 @@ func (d *decoder) object(fields []field, path string) (values map[string]any, er
 			return nil, e
 		}
 		ends[i] = d.pos
+		shut(i)
 		observed[i] = integerValue
 		if !f.derived() {
 			values[f.name] = value
@@ -199,11 +226,15 @@ func (d *decoder) object(fields []field, path string) (values map[string]any, er
 		if f.measure == nil {
 			continue
 		}
-		if measured(f.measure, starts, ends, values, fields) != observed[i] {
+		want, code, expected := measured(f.measure, starts, ends, values, fields), "constraint_mismatch", "stored value equals measured fields"
+		if f.measure.kind == "checksum" {
+			want, code, expected = strconv.FormatUint(uint64(sums[i].Sum32()), 10), "checksum_mismatch", "stored checksum equals computed checksum"
+		}
+		if want != observed[i] {
 			old := entrySize(d.trace.Entries[entries[i]])
 			d.trace.Entries[entries[i]].State = "failed"
 			d.traceBytes += entrySize(d.trace.Entries[entries[i]]) - old
-			return nil, d.diagnostic("constraint_mismatch", path+"/"+f.name, &starts[i], starts[i], "stored value equals measured fields", "stored value differs")
+			return nil, d.diagnostic(code, path+"/"+f.name, &starts[i], starts[i], expected, "stored value differs")
 		}
 	}
 	return values, nil
@@ -490,6 +521,9 @@ func (d *decoder) read(n int, path string, start int64) ([]byte, error) {
 	}
 	if e := d.cancel(path, &start); e != nil {
 		return nil, e
+	}
+	for _, h := range d.active {
+		_, _ = h.Write(raw)
 	}
 	return raw, nil
 }

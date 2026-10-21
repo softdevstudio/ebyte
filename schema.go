@@ -84,9 +84,10 @@ type field struct {
 // from..to inclusive, the offset of sibling from, or the element count of
 // repeat sibling from, plus add.
 type measure struct {
-	kind     string // "size", "offset" or "count"
-	from, to int
-	add      int64
+	kind      string // "size", "offset", "count" or "checksum"
+	from, to  int
+	add       int64
+	algorithm string // for checksums
 }
 
 // derived reports whether a field is calculated by the encoder and therefore
@@ -204,7 +205,7 @@ func validEscapes(raw []byte) bool {
 func safePath(path, key string) string {
 	// Only grammar member names enter diagnostics; arbitrary unknown keys stay private.
 	switch key {
-	case "schema_version", "name", "endian", "fields", "type", "length", "count", "encoding", "expect", "when", "derive", "field", "equals", "count_of", "size_of", "offset_of", "from", "to", "add", "until":
+	case "schema_version", "name", "endian", "fields", "type", "length", "count", "encoding", "expect", "when", "derive", "field", "equals", "count_of", "size_of", "offset_of", "checksum", "of", "from", "to", "add", "until":
 		return path + "/" + key
 	}
 	return path
@@ -495,7 +496,7 @@ func compileFields(v any, path string, depth int, endian string, limits Limits, 
 				return nil, failure("invalid_schema", p+"/derive")
 			}
 			forms := 0
-			for _, k := range []string{"count_of", "size_of", "offset_of"} {
+			for _, k := range []string{"count_of", "size_of", "offset_of", "checksum"} {
 				if _, ok := obj[k]; ok {
 					forms++
 				}
@@ -503,8 +504,12 @@ func compileFields(v any, path string, depth int, endian string, limits Limits, 
 			if forms != 1 {
 				return nil, failure("invalid_schema", p+"/derive")
 			}
-			if e := members(obj, p+"/derive", nil, []string{"count_of", "size_of", "offset_of", "add"}); e != nil {
+			if e := members(obj, p+"/derive", nil, []string{"count_of", "size_of", "offset_of", "checksum", "of", "add"}); e != nil {
 				return nil, e
+			}
+			_, hasChecksum := obj["checksum"]
+			if _, hasOf := obj["of"]; hasOf != hasChecksum {
+				return nil, failure("invalid_schema", p+"/derive/of")
 			}
 			// Resolved after all siblings are known; -2 marks it pending.
 			f.derive = -2
@@ -515,6 +520,18 @@ func compileFields(v any, path string, depth int, endian string, limits Limits, 
 		if out[i].derive == -2 {
 			if e := resolveDerive(out, i, a[i].(map[string]any)["derive"].(map[string]any), fmt.Sprintf("%s/%d/derive", path, i)); e != nil {
 				return nil, e
+			}
+		}
+	}
+	// A checksum range may hold sizes and offsets, which are written first,
+	// but not itself or another checksum, which would make the order circular.
+	for i, f := range out {
+		if f.measure == nil || f.measure.kind != "checksum" {
+			continue
+		}
+		for j := f.measure.from; j <= f.measure.to; j++ {
+			if out[j].measure != nil && out[j].measure.kind == "checksum" {
+				return nil, failure("invalid_schema", fmt.Sprintf("%s/%d/derive/of", path, i))
 			}
 		}
 	}
@@ -575,6 +592,23 @@ func resolveDerive(out []field, i int, obj map[string]any, path string) error {
 		}
 		out[i].derive = j
 		return nil
+	case obj["checksum"] != nil:
+		key = "checksum"
+		algorithm, ok := obj[key].(string)
+		if !ok || checksumWidths[algorithm] == "" {
+			return failure("invalid_schema", path+"/checksum")
+		}
+		if out[i].kind != checksumWidths[algorithm] {
+			return failure("invalid_schema", path+"/checksum")
+		}
+		if _, ok := obj["add"]; ok {
+			return failure("invalid_schema", path+"/add")
+		}
+		from, to, e := targetRange(obj["of"], sibling, "of", path)
+		if e != nil {
+			return e
+		}
+		m = measure{kind: "checksum", from: from, to: to, algorithm: algorithm}
 	case obj["offset_of"] != nil:
 		key = "offset_of"
 		j, e := sibling(obj[key], key)
@@ -584,20 +618,10 @@ func resolveDerive(out []field, i int, obj map[string]any, path string) error {
 		m = measure{kind: "offset", from: j, to: j}
 	default:
 		key = "size_of"
-		if r, ok := obj[key].(map[string]any); ok {
-			if e := members(r, path+"/"+key, []string{"from", "to"}, nil); e != nil {
-				return e
-			}
-			from, e := sibling(r["from"], key+"/from")
+		if _, ok := obj[key].(map[string]any); ok {
+			from, to, e := targetRange(obj[key], sibling, key, path)
 			if e != nil {
 				return e
-			}
-			to, e := sibling(r["to"], key+"/to")
-			if e != nil {
-				return e
-			}
-			if from > to {
-				return failure("invalid_schema", path+"/"+key)
 			}
 			m = measure{kind: "size", from: from, to: to}
 			break
@@ -634,4 +658,29 @@ func resolveDerive(out []field, i int, obj map[string]any, path string) error {
 	out[i].derive = -1
 	out[i].measure = &m
 	return nil
+}
+
+// targetRange resolves a measured target: one sibling name, or an inclusive
+// {"from","to"} range of siblings in schema order.
+func targetRange(v any, sibling func(any, string) (int, error), key, path string) (int, int, error) {
+	r, ok := v.(map[string]any)
+	if !ok {
+		j, e := sibling(v, key)
+		return j, j, e
+	}
+	if e := members(r, path+"/"+key, []string{"from", "to"}, nil); e != nil {
+		return 0, 0, e
+	}
+	from, e := sibling(r["from"], key+"/from")
+	if e != nil {
+		return 0, 0, e
+	}
+	to, e := sibling(r["to"], key+"/to")
+	if e != nil {
+		return 0, 0, e
+	}
+	if from > to {
+		return 0, 0, failure("invalid_schema", path+"/"+key)
+	}
+	return from, to, nil
 }
