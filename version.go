@@ -2,4 +2,4 @@
 // editable values and field traces, and encodes validated editable documents.
 package ebyte
 
-const Version = "0.5.0"
+const Version = "0.6.0"
