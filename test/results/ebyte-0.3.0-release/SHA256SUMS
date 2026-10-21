@@ -1,0 +1,6 @@
+80a06a60a38128c6cedbc79f8c896a8db4e159e64a2147212bedffeaffe1384a  RELEASE-MANIFEST.json
+b22cc0519226e26ebf53b5fb7ed70da96a4ba1a8ddaeb4775cf0d575a6b2266a  ebyte-darwin-amd64.tar.gz
+e5d34460321344b0a5607750a5075d190fb061b94117851a2b033611add27a20  ebyte-darwin-arm64.tar.gz
+d86ea264728ad876de5f6429a27e73fed8a28ad65f526495c5db2fb2e38440fa  ebyte-linux-amd64.tar.gz
+6b3cff05dfb1e5017988f36fb44fd9c635201df6c9687bf4a8e98aaf41267e29  ebyte-linux-arm64.tar.gz
+2c41821c3f4f1e809e6be16df74bdf20a05b41a64d7a3b92c04786c97124cc64  ebyte-windows-amd64.zip
