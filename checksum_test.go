@@ -5,9 +5,11 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/hex"
+	"hash/adler32"
 	"hash/crc32"
 	"reflect"
 	"testing"
+	"testing/iotest"
 )
 
 // Check values for the ASCII bytes "123456789" from the published CRC
@@ -194,4 +196,55 @@ func FuzzChecksums(f *testing.F) {
 			t.Fatalf("decode back: %v", e)
 		}
 	})
+}
+
+// Ranges that end at a tag repeat (whose look-ahead reads past the range),
+// that start or end at a field whose when is false, and that hold elements
+// with checksums of their own. Expected values come from hash/adler32 and the
+// CRC-16/MODBUS check value, not from the codec.
+func TestChecksumRangeEdges(t *testing.T) {
+	p := repeatPlan(t, `{"schema_version":1,"name":"e","endian":"little","fields":[
+{"name":"flag","type":"u8"},
+{"name":"opt","type":"bytes","length":1,"when":{"field":"flag","equals":"1"}},
+{"name":"r","type":"repeat","until":"tag_mismatch","fields":[
+ {"name":"tag","type":"bytes","length":1,"expect":"52"},
+ {"name":"payload","type":"bytes","length":9},
+ {"name":"c","type":"u16","derive":{"checksum":"crc16_modbus","of":"payload"}}]},
+{"name":"tail_opt","type":"bytes","length":1,"when":{"field":"flag","equals":"1"}},
+{"name":"sum","type":"u32","derive":{"checksum":"adler32","of":{"from":"opt","to":"tail_opt"}}},
+{"name":"end","type":"bytes","length":1}]}`, DefaultLimits())
+	element := append(append([]byte{0x52}, "123456789"...), 0x37, 0x4b)
+	for _, flag := range []byte{0, 1} {
+		var covered []byte
+		input := []byte{flag}
+		if flag == 1 {
+			input = append(input, 0xaa)
+			covered = append(covered, 0xaa)
+		}
+		input = append(input, element...)
+		input = append(input, element...)
+		covered = append(covered, element...)
+		covered = append(covered, element...)
+		if flag == 1 {
+			input = append(input, 0xbb)
+			covered = append(covered, 0xbb)
+		}
+		sum := make([]byte, 4)
+		binary.LittleEndian.PutUint32(sum, adler32.Checksum(covered))
+		input = append(append(input, sum...), 0x45)
+		doc, _, e := p.Decode(context.Background(), iotest.OneByteReader(bytes.NewReader(input)))
+		if e != nil {
+			t.Fatalf("flag %d: %v", flag, e)
+		}
+		var out bytes.Buffer
+		if e := p.Encode(context.Background(), doc, &out); e != nil || !bytes.Equal(out.Bytes(), input) {
+			t.Fatalf("flag %d round trip: %v", flag, e)
+		}
+		// Damage the second element's payload: its own CRC fails first.
+		bad := append([]byte(nil), input...)
+		bad[len(input)-7-3] ^= 1
+		if _, _, e := p.Decode(context.Background(), bytes.NewReader(bad)); diagnosticOf(t, e).Code != "checksum_mismatch" || diagnosticOf(t, e).Path != "/r/1/c" {
+			t.Fatalf("flag %d: inner damage reported as %v", flag, e)
+		}
+	}
 }

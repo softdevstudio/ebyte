@@ -31,9 +31,11 @@ func newChecksum(algorithm string) checksum {
 		return &crc16{reflected: true}
 	case "crc16_modbus":
 		return &crc16{reflected: true, value: 0xffff}
-	default:
+	case "crc16_xmodem":
 		return &crc16{}
 	}
+	// Compile only accepts names listed in checksumWidths.
+	panic("ebyte: unknown checksum " + algorithm)
 }
 
 // crc16 computes the reflected 0x8005 variants (ARC, Modbus) or the

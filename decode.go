@@ -166,8 +166,10 @@ func (d *decoder) object(fields []field, path string) (values map[string]any, er
 	observed := make([]string, len(fields))
 	// Field spans and trace entries, for checking measured integers at the end.
 	starts, ends, entries := make([]int64, len(fields)), make([]int64, len(fields)), make([]int, len(fields))
-	// Checksums over sibling ranges hash bytes as they are read.
+	// Checksums over sibling ranges hash bytes as they are read. Whatever
+	// happens below, leave the active list as it was found.
 	sums := make([]checksum, len(fields))
+	defer func(n int) { d.active = d.active[:n] }(len(d.active))
 	open := func(i int) {
 		for c, f := range fields {
 			if f.measure != nil && f.measure.kind == "checksum" && f.measure.from == i {
@@ -249,6 +251,9 @@ func measured(m *measure, starts, ends []int64, values map[string]any, fields []
 		n = ends[m.to] - starts[m.from]
 	case "offset":
 		n = starts[m.from]
+	case "checksum":
+		// Checksums come from the running hash, not from spans.
+		return ""
 	default:
 		a, _ := values[fields[m.from].name].([]any)
 		n = int64(len(a))
