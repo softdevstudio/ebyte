@@ -1,0 +1,94 @@
+{
+  "version": "0.4.0",
+  "source_sha": "61de2470bf9846e2113f139bfad6981983002161",
+  "endpoints": {
+    "tags/v0.4.0": {
+      "release_id": 419567679,
+      "assets": [
+        {
+          "name": "RELEASE-MANIFEST.json",
+          "bytes": 26258,
+          "sha256": "a1b793a39e85c52a2536656d2a3aac228e82b3a35a79d709e85c8f144ebb962c"
+        },
+        {
+          "name": "SHA256SUMS",
+          "bytes": 544,
+          "sha256": "b03c213cfeec0cf1e486898d69394f7076a0725e24da4d26ac20d5f74e1110cd"
+        },
+        {
+          "name": "ebyte-darwin-amd64.tar.gz",
+          "bytes": 1518414,
+          "sha256": "d0bcdf7b46147349802b81ae4adc48aeecbaa5954f35f6f3ca171efa590f16a3"
+        },
+        {
+          "name": "ebyte-darwin-arm64.tar.gz",
+          "bytes": 1394783,
+          "sha256": "09004ed26d9bca0e20f6f49ed244d83f5b0e2c5ea5db3c811f3e6a54602e26c4"
+        },
+        {
+          "name": "ebyte-linux-amd64.tar.gz",
+          "bytes": 1498938,
+          "sha256": "d7c35d1275831f22782d6209a87e836977abb2f69a239b94e9e7cca797c6b717"
+        },
+        {
+          "name": "ebyte-linux-arm64.tar.gz",
+          "bytes": 1349097,
+          "sha256": "e596f1b9878d3a354959ecade89d1100546e67a877c8cb332b51f335cfb55964"
+        },
+        {
+          "name": "ebyte-windows-amd64.zip",
+          "bytes": 1583103,
+          "sha256": "6a76bb2bb1e2c95a61c6321dfdb554a7b2e2b57388d77e103f04009e49db2015"
+        }
+      ]
+    },
+    "latest": {
+      "release_id": 419567679,
+      "assets": [
+        {
+          "name": "RELEASE-MANIFEST.json",
+          "bytes": 26258,
+          "sha256": "a1b793a39e85c52a2536656d2a3aac228e82b3a35a79d709e85c8f144ebb962c"
+        },
+        {
+          "name": "SHA256SUMS",
+          "bytes": 544,
+          "sha256": "b03c213cfeec0cf1e486898d69394f7076a0725e24da4d26ac20d5f74e1110cd"
+        },
+        {
+          "name": "ebyte-darwin-amd64.tar.gz",
+          "bytes": 1518414,
+          "sha256": "d0bcdf7b46147349802b81ae4adc48aeecbaa5954f35f6f3ca171efa590f16a3"
+        },
+        {
+          "name": "ebyte-darwin-arm64.tar.gz",
+          "bytes": 1394783,
+          "sha256": "09004ed26d9bca0e20f6f49ed244d83f5b0e2c5ea5db3c811f3e6a54602e26c4"
+        },
+        {
+          "name": "ebyte-linux-amd64.tar.gz",
+          "bytes": 1498938,
+          "sha256": "d7c35d1275831f22782d6209a87e836977abb2f69a239b94e9e7cca797c6b717"
+        },
+        {
+          "name": "ebyte-linux-arm64.tar.gz",
+          "bytes": 1349097,
+          "sha256": "e596f1b9878d3a354959ecade89d1100546e67a877c8cb332b51f335cfb55964"
+        },
+        {
+          "name": "ebyte-windows-amd64.zip",
+          "bytes": 1583103,
+          "sha256": "6a76bb2bb1e2c95a61c6321dfdb554a7b2e2b57388d77e103f04009e49db2015"
+        }
+      ]
+    }
+  },
+  "downloaded_native_smoke": {
+    "native_smoke": "passed",
+    "version": "0.4.0",
+    "platform": "Linux",
+    "architecture": "x86_64",
+    "round_trip_sha256": "6407bb701190903a390ce78b7640d34093164d97a1d9bdb50541f90557e378f9",
+    "file_publication": "enabled"
+  }
+}
