@@ -200,7 +200,9 @@ func (d *decoder) object(fields []field, path string) (values map[string]any, er
 			continue
 		}
 		if measured(f.measure, starts, ends, values, fields) != observed[i] {
+			old := entrySize(d.trace.Entries[entries[i]])
 			d.trace.Entries[entries[i]].State = "failed"
+			d.traceBytes += entrySize(d.trace.Entries[entries[i]]) - old
 			return nil, d.diagnostic("constraint_mismatch", path+"/"+f.name, &starts[i], starts[i], "stored value equals measured fields", "stored value differs")
 		}
 	}
