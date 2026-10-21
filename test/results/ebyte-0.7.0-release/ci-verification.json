@@ -1,0 +1,62 @@
+{
+ "source_sha": "ccb00da6932a3ffe419b9d02fd6d87276ab24350",
+ "runs": [
+  {
+   "id": 39627221604,
+   "name": "CI",
+   "url": "https://github.com/softdevstudio/ebyte/actions/runs/39627221604",
+   "conclusion": "success",
+   "jobs": [
+    {
+     "id": 119315467287,
+     "name": "test (ubuntu-latest)",
+     "conclusion": "success",
+     "note": "GitHub still listed this job as in_progress after its run completed with success; every step, including Complete job, reported success."
+    },
+    {
+     "id": 119315467455,
+     "name": "test (macos-latest)",
+     "conclusion": "success"
+    },
+    {
+     "id": 119315467497,
+     "name": "windows",
+     "conclusion": "success"
+    }
+   ]
+  },
+  {
+   "id": 39627612701,
+   "name": "Release",
+   "url": "https://github.com/softdevstudio/ebyte/actions/runs/39627612701",
+   "conclusion": "success",
+   "jobs": [
+    {
+     "id": 119316901650,
+     "name": "plan",
+     "conclusion": "success"
+    },
+    {
+     "id": 119316982150,
+     "name": "package (macos-latest, darwin)",
+     "conclusion": "success"
+    },
+    {
+     "id": 119316982310,
+     "name": "package (ubuntu-latest, linux)",
+     "conclusion": "success"
+    },
+    {
+     "id": 119316982694,
+     "name": "package (windows-latest, windows)",
+     "conclusion": "success"
+    },
+    {
+     "id": 119317645841,
+     "name": "publish",
+     "conclusion": "success"
+    }
+   ]
+  }
+ ]
+}
