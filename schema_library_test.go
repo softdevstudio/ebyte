@@ -17,6 +17,7 @@ func TestSchemaLibrarySamples(t *testing.T) {
 		"riff-wave":           "tagged.wav",
 		"zip":                 "three.zip",
 		"png":                 "stripes.png",
+		"pcap":                "sensor.pcap",
 	}
 	entries, e := os.ReadDir("schemas")
 	if e != nil {

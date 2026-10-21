@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "name": "pcap",
+  "endian": "little",
+  "fields": [
+    {"name": "magic", "type": "bytes", "length": 4, "expect": "d4c3b2a1"},
+    {"name": "version_major", "type": "u16", "expect": "2"},
+    {"name": "version_minor", "type": "u16", "expect": "4"},
+    {"name": "thiszone", "type": "i32"},
+    {"name": "sigfigs", "type": "u32"},
+    {"name": "snaplen", "type": "u32"},
+    {"name": "network", "type": "u32"},
+    {"name": "packets", "type": "repeat", "until": "end_of_input", "fields": [
+      {"name": "ts_sec", "type": "u32"},
+      {"name": "ts_usec", "type": "u32"},
+      {"name": "incl_len", "type": "u32", "derive": {"size_of": "data"}},
+      {"name": "orig_len", "type": "u32"},
+      {"name": "data", "type": "bytes", "length": {"field": "incl_len"}}
+    ]}
+  ]
+}
