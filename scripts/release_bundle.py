@@ -72,8 +72,8 @@ changes = re.search(r'^### EByte v' + re.escape(version) + r'\n(.*?)(?=^### |\Z)
                     (root / 'docs' / 'releases.md').read_text(encoding='utf-8'), re.M | re.S)
 if changes and changes.group(1).strip():
     lines.extend(['', 'Changes:', changes.group(1).strip()])
-lines.extend(['', 'Windows supports stdin/stdout and file input; CLI --output FILE publication remains disabled there.',
-              'Linux/macOS file publication requires hard links and a trusted output directory. Blocking filesystem calls may delay cancellation.',
+lines.extend(['', 'File publication with --output FILE works on Linux, macOS and Windows and requires hard links and a trusted output directory.',
+              'Blocking filesystem calls may delay cancellation.',
               'Documents, traces and encoded output materialize in bounded memory. Allocation totals are not peak memory or throughput guarantees.',
               'Structural diff, automatic format discovery and graphical editing are outside v1.', '',
               'Each archive includes examples, Apache LICENSE/NOTICE, exact-toolchain GO-NOTICES and release.json. Verify downloads with SHA256SUMS.'])

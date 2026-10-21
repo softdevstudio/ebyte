@@ -16,8 +16,19 @@ import (
 
 func supportedPublication(t *testing.T) {
 	t.Helper()
-	if runtime.GOOS != "linux" && runtime.GOOS != "darwin" {
+	if runtime.GOOS != "linux" && runtime.GOOS != "darwin" && runtime.GOOS != "windows" {
 		t.Skip("publication not enabled on this platform")
+	}
+}
+
+// unixPublication skips checks of Unix permission bits, symlinks made without
+// privileges and renaming a directory that has open handles, none of which
+// apply on Windows.
+func unixPublication(t *testing.T) {
+	t.Helper()
+	supportedPublication(t)
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix file semantics")
 	}
 }
 func assertNoTemporary(t *testing.T, dir string) {
@@ -40,7 +51,7 @@ func TestPublishOutput(t *testing.T) {
 		t.Fatal("publication")
 	}
 	info, e := os.Stat(path)
-	if e != nil || info.Mode().Perm() != outputFileMode {
+	if e != nil || (runtime.GOOS != "windows" && info.Mode().Perm() != outputFileMode) {
 		t.Fatal("output permissions")
 	}
 	assertNoTemporary(t, dir)
@@ -92,6 +103,9 @@ func TestPublicationRefusesSymlinksAndDirectories(t *testing.T) {
 	supportedPublication(t)
 	for _, mode := range []string{"symlink", "dangling", "directory"} {
 		t.Run(mode, func(t *testing.T) {
+			if mode != "directory" && runtime.GOOS == "windows" {
+				t.Skip("symlinks need privileges on Windows")
+			}
 			dir := t.TempDir()
 			target := filepath.Join(dir, "target")
 			path := filepath.Join(dir, "result")
@@ -143,7 +157,7 @@ func TestDestinationCreatedDuringStaging(t *testing.T) {
 	assertNoTemporary(t, dir)
 }
 func TestPublicationPinsRenamedParent(t *testing.T) {
-	supportedPublication(t)
+	unixPublication(t)
 	base := t.TempDir()
 	dir := filepath.Join(base, "parent")
 	moved := filepath.Join(base, "moved")
@@ -297,7 +311,7 @@ func TestPublicationRejectsDirectoryStyleDestinations(t *testing.T) {
 	assertNoTemporary(t, dir)
 }
 func TestPublishedFileUsesOutputMode(t *testing.T) {
-	supportedPublication(t)
+	unixPublication(t)
 	original := outputFileMode
 	defer func() { outputFileMode = original }()
 	for _, mode := range []os.FileMode{0644, 0640, 0600} {

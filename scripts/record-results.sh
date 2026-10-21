@@ -38,6 +38,7 @@ go test -run='^$' -fuzz=FuzzRepeat -fuzztime=5s -parallel=2 -timeout=60s .
 go test -run='^$' -fuzz=FuzzDerivedSizes -fuzztime=5s -parallel=2 -timeout=60s .
 go test -run='^$' -fuzz=FuzzChecksums -fuzztime=5s -parallel=2 -timeout=60s .
 go test -run='^$' -fuzz=FuzzDiff -fuzztime=5s -parallel=2 -timeout=60s .
+go test -run='^$' -fuzz=FuzzFloatsAndBits -fuzztime=5s -parallel=2 -timeout=60s .
 go test -run='^$' -fuzz=FuzzCLIArguments -fuzztime=5s -parallel=2 -timeout=60s ./cmd/ebyte
 build_dir="$(mktemp -d)"
 trap 'rm -rf "$build_dir"' EXIT
@@ -46,4 +47,4 @@ python3 scripts/smoke.py "$build_dir/ebyte"
 python3 scripts/demo.py "$build_dir/ebyte" test/results/latest/demo.json
 go build -o "$build_dir/resourcecheck" ./internal/resourcecheck
 python3 scripts/resources.py "$build_dir/resourcecheck" test/results/latest/resources.json
-printf 'PASS: formatting, vet, race, independent fixture/decoder oracles, ten bounded fuzz targets, build and operational CLI smoke and saved round-trip demo and resource observations\n'
+printf 'PASS: formatting, vet, race, independent fixture/decoder oracles, eleven bounded fuzz targets, build and operational CLI smoke and saved round-trip demo and resource observations\n'

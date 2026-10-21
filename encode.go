@@ -265,6 +265,9 @@ type encoder struct {
 	// tagEnds records where each tag_mismatch repeat ended, so prepare can
 	// reject output whose next bytes would read as one more element.
 	tagEnds []tagEnd
+	// group collects the bit group being written; its bytes are appended
+	// after its last member.
+	group uint64
 }
 
 type tagEnd struct {
@@ -454,7 +457,7 @@ func (e *encoder) member(fields []field, m map[string]any, f field, v any, prese
 	if err := e.budget(p, 0, size); err != nil {
 		return err
 	}
-	if _, _, isInt := integer(f.kind); isInt {
+	if _, _, isInt := integer(f.kind); isInt || f.kind == "bits" || f.kind == "f32" || f.kind == "f64" {
 		s, ok := v.(string)
 		if !ok {
 			return encodeFailure("invalid_document", p)
@@ -462,10 +465,21 @@ func (e *encoder) member(fields []field, m map[string]any, f field, v any, prese
 		if err := e.stringBudget(p, s); err != nil {
 			return err
 		}
-		if err := e.integer(f, s, p); err != nil {
+		var err error
+		switch f.kind {
+		case "bits":
+			err = e.bits(f, s, p)
+		case "f32", "f64":
+			err = e.float(f, s, p)
+		default:
+			err = e.integer(f, s, p)
+		}
+		if err != nil {
 			return err
 		}
-		observed[i] = s
+		if f.kind != "f32" && f.kind != "f64" {
+			observed[i] = s
+		}
 		return nil
 	}
 	if f.kind == "repeat" {
@@ -521,6 +535,11 @@ func (e *encoder) member(fields []field, m map[string]any, f field, v any, prese
 			if !(b >= '0' && b <= '9' || b >= 'a' && b <= 'f') {
 				return encodeFailure("invalid_document", p)
 			}
+		}
+		if f.length.toOffset && len(s)/2 != n {
+			d := encodePosition("constraint_mismatch", p, len(e.out), len(e.out)).(*Diagnostic)
+			d.Expected, d.Observed = "bytes reach the declared offset", "bytes end before or after the declared offset"
+			return d
 		}
 		if len(s)/2 != n {
 			return encodeFailure("value_out_of_range", p)
@@ -597,7 +616,22 @@ func (e *encoder) repeat(f field, v any, path string) error {
 }
 func (e *encoder) dimension(f field, observed []string, path string) (int, error) {
 	n := f.length.literal
-	if f.length.dynamic {
+	if f.length.toOffset {
+		target := int64(n)
+		if f.length.dynamic {
+			parsed, err := strconv.ParseInt(observed[f.length.ref], 10, 64)
+			if err != nil {
+				return 0, encodeFailure("limit_exceeded", path)
+			}
+			target = parsed
+		}
+		if target < int64(len(e.out)) {
+			d := encodePosition("constraint_mismatch", path, len(e.out), len(e.out)).(*Diagnostic)
+			d.Expected, d.Observed = "declared offset at or after the field", "declared offset is behind the field"
+			return 0, d
+		}
+		n = uint64(target - int64(len(e.out)))
+	} else if f.length.dynamic {
 		s := observed[f.length.ref]
 		if len(s) > 0 && s[0] == '-' {
 			return 0, encodeFailure("value_out_of_range", path)
@@ -647,6 +681,61 @@ func (e *encoder) integer(f field, s, path string) error {
 		}
 		raw[j] = byte(n)
 		n >>= 8
+	}
+	e.out = append(e.out, raw[:size]...)
+	return nil
+}
+
+// bits adds one member to the current bit group and writes the group's bytes,
+// big-endian, after its last member.
+func (e *encoder) bits(f field, s, path string) error {
+	if !decimal.MatchString(s) {
+		return encodeFailure("invalid_document", path)
+	}
+	if !fitsField(s, f) {
+		return encodeFailure("value_out_of_range", path)
+	}
+	if f.hasExpect && s != f.expect {
+		return encodePosition("constraint_mismatch", path, len(e.out), len(e.out))
+	}
+	if f.groupBytes > 0 {
+		e.group = 0
+	}
+	v, _ := strconv.ParseUint(s, 10, 64)
+	e.group |= v << f.shift
+	// The last member of a group has shift 0: write the group's bytes.
+	if f.shift != 0 {
+		return nil
+	}
+	if err := e.output(path, f.groupSize); err != nil {
+		return err
+	}
+	for k := f.groupSize - 1; k >= 0; k-- {
+		e.out = append(e.out, byte(e.group>>(8*k)))
+	}
+	return nil
+}
+
+func (e *encoder) float(f field, s, path string) error {
+	size := 4
+	if f.kind == "f64" {
+		size = 8
+	}
+	bits, code := parseFloat(s, size)
+	if code != "" {
+		return encodeFailure(code, path)
+	}
+	if err := e.output(path, size); err != nil {
+		return err
+	}
+	var raw [8]byte
+	for i := 0; i < size; i++ {
+		j := i
+		if f.endian == "big" {
+			j = size - 1 - i
+		}
+		raw[j] = byte(bits)
+		bits >>= 8
 	}
 	e.out = append(e.out, raw[:size]...)
 	return nil

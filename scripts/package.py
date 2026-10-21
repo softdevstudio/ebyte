@@ -73,7 +73,7 @@ for arch in (('amd64',) if args.family == 'windows' else ('amd64', 'arm64')):
         for name in ('packet.schema.json', 'packet.document.json', 'packet.hex'):
             shutil.copyfile(root / 'testdata' / name, examples / name)
         (examples / 'packet.bin').write_bytes(bytes.fromhex((examples / 'packet.hex').read_text()))
-        (content / 'QUICKSTART.txt').write_text('EByte ' + version + '\n\nRun: ' + binary_name + ' decode --schema examples/packet.schema.json --input examples/packet.bin\nOutput defaults to stdout. Windows file publication is unsupported; use stdout.\nSee README.md and https://github.com/softdevstudio/ebyte for the manual.\n', encoding='utf-8')
+        (content / 'QUICKSTART.txt').write_text('EByte ' + version + '\n\nRun: ' + binary_name + ' decode --schema examples/packet.schema.json --input examples/packet.bin\nOutput defaults to stdout; --output FILE creates a new file and never replaces one.\nSee README.md and https://github.com/softdevstudio/ebyte for the manual.\n', encoding='utf-8')
         for name, data in notices.items():
             dest = content / 'GO-NOTICES' / name
             dest.parent.mkdir(parents=True, exist_ok=True)
@@ -81,7 +81,7 @@ for arch in (('amd64',) if args.family == 'windows' else ('amd64', 'arm64')):
         metadata = {'version': version, 'source_sha': revision, 'source_dirty': dirty,
                     'go_version': goversion, 'goos': args.family, 'goarch': arch,
                     'native_tested': native, 'verification': 'native smoke passed' if native else 'cross-built; not executed',
-                    'file_publication': args.family in ('linux', 'darwin'),
+                    'file_publication': args.family in ('linux', 'darwin', 'windows'),
                     'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(),
                     'go_notices': {name: hashlib.sha256(data).hexdigest() for name, data in sorted(notices.items())}}
         (content / 'release.json').write_text(json.dumps(metadata, indent=2) + '\n', encoding='utf-8')

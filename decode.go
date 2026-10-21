@@ -51,6 +51,11 @@ type decoder struct {
 	trace      Trace
 	// active checksums receive every byte read while their range is open.
 	active []checksum
+	// group holds the bit group being read: its value and start offset.
+	group struct {
+		value uint64
+		start int64
+	}
 }
 
 // Decode reads one complete binary representation. It returns no document on any
@@ -193,6 +198,10 @@ func (d *decoder) object(fields []field, path string) (values map[string]any, er
 	for i, f := range fields {
 		fieldPath := path + "/" + f.name
 		starts[i], ends[i] = d.pos, d.pos
+		if f.kind == "bits" && f.groupBytes == 0 {
+			// Later members of a bit group share the group's bytes.
+			starts[i] = d.group.start
+		}
 		open(i)
 		if e = d.cancel(fieldPath, &d.pos); e != nil {
 			return nil, e
@@ -266,7 +275,21 @@ func measured(m *measure, starts, ends []int64, values map[string]any, fields []
 }
 func (d *decoder) dimension(f field, observed []string, path string) (int, error) {
 	n := f.length.literal
-	if f.length.dynamic {
+	if f.length.toOffset {
+		target := int64(n)
+		if f.length.dynamic {
+			parsed, e := strconv.ParseInt(observed[f.length.ref], 10, 64)
+			if e != nil {
+				// Only a u64 above the int64 range fails to parse.
+				return 0, d.limit(path, &d.pos)
+			}
+			target = parsed
+		}
+		if target < d.pos {
+			return 0, d.diagnostic("constraint_mismatch", path, &d.pos, d.pos, "declared offset at or after the field", "declared offset is behind the field")
+		}
+		n = uint64(target - d.pos)
+	} else if f.length.dynamic {
 		s := observed[f.length.ref]
 		if len(s) > 0 && s[0] == '-' {
 			return 0, d.diagnostic("value_out_of_range", path, &d.pos, d.pos, "nonnegative dimension", "negative dimension")
@@ -288,11 +311,17 @@ func (d *decoder) dimension(f field, observed []string, path string) (int, error
 }
 func (d *decoder) value(f field, path string, observed []string) (value any, integerValue string, err error) {
 	start := d.pos
+	if f.kind == "bits" && f.groupBytes == 0 {
+		start = d.group.start
+	}
 	index, e := d.begin(path, f.kind, start)
 	if e != nil {
 		return nil, "", e
 	}
 	defer func() { err = d.finish(index, err) }()
+	if f.kind == "bits" || f.kind == "f32" || f.kind == "f64" {
+		return d.scalar(f, path, index, start)
+	}
 	bits, unsigned, isInt := integer(f.kind)
 	if isInt {
 		if !f.derived() {
@@ -672,4 +701,68 @@ func traceSize(t *Trace) int {
 		}
 	}
 	return n
+}
+
+// scalar reads a float or a bit field and records its value like an integer.
+func (d *decoder) scalar(f field, path string, index int, start int64) (any, string, error) {
+	if !f.derived() {
+		if e := d.documentBudget(path, &start, 1, 3); e != nil {
+			return nil, "", e
+		}
+	}
+	if len(`,"value":"nan:0000000000000000"`) > d.plan.limits.MaxTraceBytes-d.traceBytes {
+		return nil, "", d.limit(path, &start)
+	}
+	var s string
+	switch f.kind {
+	case "bits":
+		if f.groupBytes > 0 {
+			raw, e := d.read(f.groupBytes, path, start)
+			if e != nil {
+				return nil, "", e
+			}
+			d.group.value, d.group.start = 0, start
+			for _, b := range raw {
+				d.group.value = d.group.value<<8 | uint64(b)
+			}
+		}
+		v := d.group.value >> f.shift
+		if f.width < 64 {
+			v &= 1<<f.width - 1
+		}
+		s = strconv.FormatUint(v, 10)
+	default:
+		size := 4
+		if f.kind == "f64" {
+			size = 8
+		}
+		raw, e := d.read(size, path, start)
+		if e != nil {
+			return nil, "", e
+		}
+		var n uint64
+		for i := range raw {
+			j := i
+			if f.endian == "little" {
+				j = len(raw) - 1 - i
+			}
+			n = n<<8 | uint64(raw[j])
+		}
+		s = formatFloat(n, size)
+	}
+	old := entrySize(d.trace.Entries[index])
+	d.trace.Entries[index].Value = &s
+	d.traceBytes += entrySize(d.trace.Entries[index]) - old
+	if f.hasExpect && s != f.expect {
+		return nil, "", d.diagnostic("constraint_mismatch", path, &start, start, "integer assertion satisfied", "integer assertion failed")
+	}
+	if !f.derived() {
+		if e := d.documentBudget(path, &start, 0, len(s)-1); e != nil {
+			return nil, "", e
+		}
+	}
+	if f.kind == "bits" {
+		return s, s, nil
+	}
+	return s, "", nil
 }

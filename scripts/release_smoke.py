@@ -39,7 +39,7 @@ assert limited.returncode == 4 and not limited.stdout
 with tempfile.TemporaryDirectory() as directory:
     output = Path(directory) / 'result.json'
     result = run(['decode', '--schema', schema, '--input=-', '--output', str(output)], raw)
-    if platform.system() in ('Linux', 'Darwin'):
+    if platform.system() in ('Linux', 'Darwin', 'Windows'):
         assert result.returncode == 0 and not result.stdout and output.is_file()
         before = output.read_bytes()
         collision = run(['decode', '--schema', schema, '--input=-', '--output', str(output)], raw)
@@ -51,4 +51,4 @@ with tempfile.TemporaryDirectory() as directory:
 print(json.dumps({'native_smoke': 'passed', 'version': version,
                   'platform': platform.system(), 'architecture': platform.machine(),
                   'round_trip_sha256': hashlib.sha256(raw).hexdigest(),
-                  'file_publication': 'enabled' if platform.system() in ('Linux', 'Darwin') else 'unsupported; stdout only'}))
+                  'file_publication': 'enabled' if platform.system() in ('Linux', 'Darwin', 'Windows') else 'unsupported; stdout only'}))

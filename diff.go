@@ -127,7 +127,8 @@ func (w *differ) object(fields []field, va, vb map[string]any, path string) erro
 			continue
 		}
 		changed := Change{Path: p, Kind: ea.Kind, Change: "changed", Derived: f.derived(), Before: span(ea), After: span(eb)}
-		if _, _, isInt := integer(f.kind); isInt {
+		if ea.Value != nil && eb.Value != nil {
+			// Integers, bit fields and floats carry their value in the trace.
 			if *ea.Value != *eb.Value {
 				if e := w.add(changed); e != nil {
 					return e

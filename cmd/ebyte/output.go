@@ -28,8 +28,8 @@ func publicationCancelled(ctx context.Context) error {
 
 // publishOutput stages in the destination directory, syncs/closes the file, then
 // atomically creates a new hard link. It never replaces a destination, including
-// a symlink. This helper is gated to native-tested Linux/macOS; unsupported
-// filesystems fail closed. It does not promise directory/power-loss durability.
+// a symlink. This helper is gated to native-tested Linux, macOS and (since
+// 0.6.0) Windows; filesystems without hard links, such as FAT, fail closed. It does not promise directory/power-loss durability.
 // The opened parent directory must be trusted against concurrent modification of
 // its entries. Directory renames are pinned by os.Root rather than followed.
 type publicationOps struct {
@@ -77,7 +77,7 @@ func publishOutputWith(ctx context.Context, destination string, produce func(io.
 	if e := publicationCancelled(ctx); e != nil {
 		return e
 	}
-	if runtime.GOOS != "linux" && runtime.GOOS != "darwin" {
+	if runtime.GOOS != "linux" && runtime.GOOS != "darwin" && runtime.GOOS != "windows" {
 		return publicationFailure("write_failed", false)
 	}
 	if !validDestination(destination) {

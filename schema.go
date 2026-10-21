@@ -58,6 +58,9 @@ type dimension struct {
 	literal uint64
 	ref     int
 	dynamic bool
+	// toOffset makes the literal or referenced value an absolute offset the
+	// field runs up to, rather than its length (bytes only, since 0.6.0).
+	toOffset bool
 }
 type condition struct {
 	ref    int
@@ -75,6 +78,15 @@ type field struct {
 	// measure is set for a measured derived integer (size, offset or repeat
 	// count of siblings); it drives nothing and is checked on decode.
 	measure *measure
+	// width is the bit count of a bits field. A group of consecutive bits
+	// fields shares bytes: groupBytes is set on its first member, every
+	// member knows its group's first and last index and its shift from the
+	// least significant bit of the group read as a big-endian integer.
+	width                 int
+	groupBytes            int
+	groupFirst, groupLast int
+	groupSize             int // bytes in the group, on every member
+	shift                 int
 	// until is set for repeat fields: "end_of_input" or "tag_mismatch".
 	until string
 	tag   []byte
@@ -205,7 +217,7 @@ func validEscapes(raw []byte) bool {
 func safePath(path, key string) string {
 	// Only grammar member names enter diagnostics; arbitrary unknown keys stay private.
 	switch key {
-	case "schema_version", "name", "endian", "fields", "type", "length", "count", "encoding", "expect", "when", "derive", "field", "equals", "count_of", "size_of", "offset_of", "checksum", "of", "from", "to", "add", "until":
+	case "schema_version", "name", "endian", "fields", "type", "length", "count", "encoding", "expect", "when", "derive", "field", "equals", "count_of", "size_of", "offset_of", "checksum", "of", "from", "to", "add", "until", "bits", "until_offset":
 		return path + "/" + key
 	}
 	return path
@@ -306,12 +318,31 @@ func fits(s string, kind string) bool {
 	_, e := strconv.ParseInt(s, 10, n)
 	return e == nil
 }
+
+// numeric reports whether a field holds an integer value other fields may
+// use: a sized integer or a bit field.
+func numeric(f field) bool {
+	_, _, isInt := integer(f.kind)
+	return isInt || f.kind == "bits"
+}
+
+// fitsField checks a canonical decimal against a field's integer range.
+func fitsField(s string, f field) bool {
+	if f.kind != "bits" {
+		return fits(s, f.kind)
+	}
+	if !natural.MatchString(s) {
+		return false
+	}
+	_, e := strconv.ParseUint(s, 10, f.width)
+	return e == nil
+}
+
 func ref(v any, prior []field, path string) (int, error) {
 	s, ok := v.(string)
 	if ok {
 		for i, f := range prior {
-			_, _, integer := integer(f.kind)
-			if f.name == s && integer && f.when == nil {
+			if f.name == s && numeric(f) && f.when == nil {
 				return i, nil
 			}
 		}
@@ -332,6 +363,23 @@ func dim(v any, prior []field, path string, cap int) (dimension, error) {
 	m, ok := v.(map[string]any)
 	if !ok {
 		return dimension{}, failure("invalid_schema", path)
+	}
+	if target, ok := m["until_offset"]; ok {
+		if e := members(m, path, []string{"until_offset"}, nil); e != nil {
+			return dimension{}, e
+		}
+		if n, ok := target.(json.Number); ok {
+			if !natural.MatchString(n.String()) {
+				return dimension{}, failure("invalid_schema", path+"/until_offset")
+			}
+			u, e := strconv.ParseUint(n.String(), 10, 64)
+			if e != nil {
+				return dimension{}, failure("limit_exceeded", path+"/until_offset")
+			}
+			return dimension{literal: u, toOffset: true}, nil
+		}
+		i, e := ref(target, prior, path+"/until_offset")
+		return dimension{ref: i, dynamic: true, toOffset: true}, e
 	}
 	if e := members(m, path, []string{"field"}, nil); e != nil {
 		return dimension{}, e
@@ -370,6 +418,11 @@ func compileFields(v any, path string, depth int, endian string, limits Limits, 
 		switch {
 		case isInt:
 			optional = append(optional, "endian", "expect", "derive")
+		case kind == "f32" || kind == "f64":
+			optional = append(optional, "endian")
+		case kind == "bits":
+			required = append(required, "bits")
+			optional = []string{"expect"}
 		case kind == "bytes":
 			required = append(required, "length")
 			optional = append(optional, "expect")
@@ -410,7 +463,7 @@ func compileFields(v any, path string, depth int, endian string, limits Limits, 
 				return nil, e
 			}
 			s, ok := obj["equals"].(string)
-			if !ok || !fits(s, out[idx].kind) {
+			if !ok || !fitsField(s, out[idx]) {
 				return nil, failure("invalid_schema", p+"/when/equals")
 			}
 			f.when = &condition{idx, s}
@@ -426,6 +479,9 @@ func compileFields(v any, path string, depth int, endian string, limits Limits, 
 			if e != nil {
 				return nil, e
 			}
+			if d.toOffset && kind != "bytes" {
+				return nil, failure("invalid_schema", p+"/"+key)
+			}
 			f.length = d
 		}
 		if kind == "string" {
@@ -435,13 +491,21 @@ func compileFields(v any, path string, depth int, endian string, limits Limits, 
 			}
 			f.encoding = s
 		}
+		if kind == "bits" {
+			n, ok := m["bits"].(json.Number)
+			w, e := strconv.Atoi(n.String())
+			if !ok || e != nil || !natural.MatchString(n.String()) || w < 1 || w > 64 {
+				return nil, failure("invalid_schema", p+"/bits")
+			}
+			f.width = w
+		}
 		if x, exists := m["expect"]; exists {
 			s, ok := x.(string)
 			valid := ok
-			if isInt {
-				valid = valid && fits(s, kind)
+			if isInt || kind == "bits" {
+				valid = valid && fitsField(s, f)
 			} else {
-				valid = valid && !f.length.dynamic && uint64(len(s)) == 2*f.length.literal && strings.ToLower(s) == s
+				valid = valid && !f.length.dynamic && !f.length.toOffset && uint64(len(s)) == 2*f.length.literal && strings.ToLower(s) == s
 				if valid {
 					_, e := hex.DecodeString(s)
 					valid = e == nil
@@ -516,6 +580,28 @@ func compileFields(v any, path string, depth int, endian string, limits Limits, 
 		}
 		out = append(out, f)
 	}
+	// Consecutive bit fields form byte-aligned groups of at most 8 bytes.
+	for i := 0; i < len(out); {
+		if out[i].kind != "bits" {
+			i++
+			continue
+		}
+		j, total := i, 0
+		for j < len(out) && out[j].kind == "bits" {
+			total += out[j].width
+			j++
+		}
+		if total%8 != 0 || total > 64 {
+			return nil, failure("invalid_schema", fmt.Sprintf("%s/%d/bits", path, j-1))
+		}
+		remaining := total
+		for k := i; k < j; k++ {
+			remaining -= out[k].width
+			out[k].shift, out[k].groupFirst, out[k].groupLast, out[k].groupSize = remaining, i, j-1, total/8
+		}
+		out[i].groupBytes = total / 8
+		i = j
+	}
 	for i := range out {
 		if out[i].derive == -2 {
 			if e := resolveDerive(out, i, a[i].(map[string]any)["derive"].(map[string]any), fmt.Sprintf("%s/%d/derive", path, i)); e != nil {
@@ -565,7 +651,7 @@ func resolveDerive(out []field, i int, obj map[string]any, path string) error {
 	drives := func(j int, kinds ...string) bool {
 		f := out[j]
 		for _, k := range kinds {
-			if f.kind == k && j > i && f.when == nil && f.length.dynamic && f.length.ref == i {
+			if f.kind == k && j > i && f.when == nil && f.length.dynamic && !f.length.toOffset && f.length.ref == i {
 				return true
 			}
 		}
@@ -630,7 +716,7 @@ func resolveDerive(out []field, i int, obj map[string]any, path string) error {
 		if e != nil {
 			return e
 		}
-		if out[j].length.dynamic && out[j].length.ref == i {
+		if out[j].length.dynamic && !out[j].length.toOffset && out[j].length.ref == i {
 			if !drives(j, "bytes", "string") || lengthUses != 1 {
 				return failure("invalid_schema", path+"/"+key)
 			}
@@ -654,6 +740,14 @@ func resolveDerive(out []field, i int, obj map[string]any, path string) error {
 			return failure("invalid_schema", path+"/add")
 		}
 		m.add = n
+	}
+	// A bit field's bytes are shared with its group, so a size, offset or
+	// checksum naming one covers the whole group.
+	if out[m.from].kind == "bits" {
+		m.from = out[m.from].groupFirst
+	}
+	if out[m.to].kind == "bits" {
+		m.to = out[m.to].groupLast
 	}
 	out[i].derive = -1
 	out[i].measure = &m
