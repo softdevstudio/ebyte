@@ -18,6 +18,8 @@ func TestSchemaLibrarySamples(t *testing.T) {
 		"zip":                 "three.zip",
 		"png":                 "stripes.png",
 		"pcap":                "sensor.pcap",
+		"wav-float32":         "tone-float.wav",
+		"bmp-8bit":            "palette.bmp",
 	}
 	entries, e := os.ReadDir("schemas")
 	if e != nil {
