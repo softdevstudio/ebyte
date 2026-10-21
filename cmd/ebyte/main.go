@@ -162,7 +162,7 @@ func runContext(ctx context.Context, args []string, in io.Reader, out, errOut io
 		result, e = runDiff(ctx, plan, opt, in)
 		var failed *ebyte.DiffError
 		if errors.As(e, &failed) {
-			return reportDiff(errOut, failed)
+			return reportDiff(ctx, errOut, failed)
 		}
 		if e == nil {
 			if opt.format == "text" {
@@ -515,18 +515,31 @@ func runDiff(ctx context.Context, plan *ebyte.Plan, opt options, stdin io.Reader
 	if e != nil {
 		return nil, &ebyte.DiffError{Input: "before", Diagnostic: e.(*ebyte.Diagnostic)}
 	}
-	defer closeBefore()
 	after, closeAfter, e := openInput(opt.after, stdin)
 	if e != nil {
+		closeBefore()
 		return nil, &ebyte.DiffError{Input: "after", Diagnostic: e.(*ebyte.Diagnostic)}
 	}
-	defer closeAfter()
-	return plan.Diff(ctx, before, after)
+	result, e := plan.Diff(ctx, before, after)
+	beforeClosed, afterClosed := closeBefore(), closeAfter()
+	if e == nil && beforeClosed != nil {
+		e = &ebyte.DiffError{Input: "before", Diagnostic: commandFailure("read_failed", "input close failed").(*ebyte.Diagnostic)}
+	} else if e == nil && afterClosed != nil {
+		e = &ebyte.DiffError{Input: "after", Diagnostic: commandFailure("read_failed", "input close failed").(*ebyte.Diagnostic)}
+	}
+	return result, e
 }
 
 // reportDiff writes the failed input and its diagnostic as one JSON line and
 // returns the diagnostic's usual exit code.
-func reportDiff(w io.Writer, failed *ebyte.DiffError) int {
+func reportDiff(ctx context.Context, w io.Writer, failed *ebyte.DiffError) int {
+	// After Ctrl-C an interrupted stdin read surfaces as a read failure; report
+	// it as cancellation at the same location, as the other commands do.
+	if ctx.Err() != nil && failed.Diagnostic.Code != "cancelled" {
+		cancelled := commandCancelled(ctx).(*ebyte.Diagnostic)
+		cancelled.Path, cancelled.Offset, cancelled.FieldStart = failed.Diagnostic.Path, failed.Diagnostic.Offset, failed.Diagnostic.FieldStart
+		failed = &ebyte.DiffError{Input: failed.Input, Diagnostic: cancelled}
+	}
 	code := report(io.Discard, failed.Diagnostic)
 	raw, _ := json.Marshal(struct {
 		DiffVersion int               `json:"diff_version"`
@@ -556,8 +569,13 @@ func textDiff(result *ebyte.DiffResult, limit int) ([]byte, error) {
 	}
 	for _, c := range result.Changes {
 		line := fmt.Sprintf("%s %s %s %s %s", c.Change, strconv.Quote(c.Path), c.Kind, side("a", c.Before), side("b", c.After))
-		if c.Before != nil && c.After != nil && c.Before.Value != nil && c.After.Value != nil {
+		switch {
+		case c.Before != nil && c.After != nil && c.Before.Value != nil && c.After.Value != nil:
 			line += " value=" + *c.Before.Value + "->" + *c.After.Value
+		case c.Before != nil && c.Before.Value != nil:
+			line += " value=" + *c.Before.Value
+		case c.After != nil && c.After.Value != nil:
+			line += " value=" + *c.After.Value
 		}
 		if c.FirstDifference != nil {
 			line += " first_difference=" + strconv.FormatInt(*c.FirstDifference, 10)

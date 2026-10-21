@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -65,5 +67,33 @@ func TestDiffCommand(t *testing.T) {
 		if code, _, _ := invoke(t, args, nil); code != 2 {
 			t.Fatalf("%v: exit %d, want usage error", args, code)
 		}
+	}
+}
+
+// cancelOnRead cancels the command on its first read, like Ctrl-C while
+// waiting on stdin.
+type cancelOnRead struct{ cancel func() }
+
+func (r cancelOnRead) Read([]byte) (int, error) {
+	r.cancel()
+	return 0, context.Canceled
+}
+
+func TestDiffCancelledStdin(t *testing.T) {
+	schema := fixturePath(t, "packet.schema.json")
+	a := filepath.Join(t.TempDir(), "a.bin")
+	if os.WriteFile(a, packetInput(t), 0o600) != nil {
+		t.Fatal("write fixture")
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	var out, errOut bytes.Buffer
+	code := runContext(ctx, []string{"diff", "--schema", schema, "--before", "-", "--after", a}, cancelOnRead{cancel}, &out, &errOut)
+	var failed struct {
+		Input      string           `json:"input"`
+		Diagnostic ebyte.Diagnostic `json:"diagnostic"`
+	}
+	if code != 3 || json.Unmarshal(errOut.Bytes(), &failed) != nil || failed.Input != "before" || failed.Diagnostic.Code != "cancelled" {
+		t.Fatalf("exit %d %s", code, errOut.Bytes())
 	}
 }
