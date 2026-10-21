@@ -177,7 +177,7 @@ func (l *documentLoader) object(fields []field, path string) (map[string]any, er
 			return nil, encodeFailure("invalid_document", path)
 		}
 		childPath := path + "/" + key
-		if _, exists := m[key]; exists || f.derive >= 0 {
+		if _, exists := m[key]; exists || f.derived() {
 			return nil, encodeFailure("invalid_document", childPath)
 		}
 		value, e := l.value(f, childPath)
@@ -339,23 +339,52 @@ func (e *encoder) object(fields []field, m map[string]any, path string) error {
 		}
 	}
 	observed := make([]string, len(fields))
+	// Field spans in the output, for measured integers written at the end.
+	starts, ends := make([]int64, len(fields)), make([]int64, len(fields))
 	members := 0
 	for i, f := range fields {
 		p := path + "/" + f.name
 		if err := encodeCancel(e.ctx, p); err != nil {
 			return err
 		}
+		starts[i] = int64(len(e.out))
 		v, present := m[f.name]
+		if f.measure != nil {
+			if present {
+				return encodeFailure("invalid_document", p)
+			}
+			// A placeholder of the same width; the value is written below.
+			if err := e.integer(f, "0", p); err != nil {
+				return err
+			}
+			ends[i] = int64(len(e.out))
+			continue
+		}
 		if f.derive >= 0 {
 			if present {
 				return encodeFailure("invalid_document", p)
 			}
-			target := fields[f.derive].name
-			a, ok := m[target].([]any)
-			if !ok || a == nil {
-				return encodeFailure("invalid_document", path+"/"+target)
+			target := fields[f.derive]
+			n, ok := 0, false
+			switch target.kind {
+			case "array":
+				var a []any
+				a, ok = m[target.name].([]any)
+				ok = ok && a != nil
+				n = len(a)
+			case "bytes":
+				var t string
+				t, ok = m[target.name].(string)
+				n = len(t) / 2
+			default:
+				var t string
+				t, ok = m[target.name].(string)
+				n = len(t)
 			}
-			s := strconv.Itoa(len(a))
+			if !ok {
+				return encodeFailure("invalid_document", path+"/"+target.name)
+			}
+			s := strconv.Itoa(n)
 			if !fits(s, f.kind) {
 				return encodeFailure("value_out_of_range", p)
 			}
@@ -363,128 +392,150 @@ func (e *encoder) object(fields []field, m map[string]any, path string) error {
 				return err
 			}
 			observed[i] = s
+			ends[i] = int64(len(e.out))
 			continue
 		}
-		if f.when != nil && observed[f.when.ref] != f.when.equals {
-			if present {
-				return encodeFailure("invalid_document", p)
-			}
+		if err := e.member(fields, m, f, v, present, i, p, observed, &members); err != nil {
+			return err
+		}
+		ends[i] = int64(len(e.out))
+	}
+	for i, f := range fields {
+		if f.measure == nil {
 			continue
 		}
-		if !present || v == nil {
+		s := measured(f.measure, starts, ends, m, fields)
+		if s == "" || !fits(s, f.kind) {
+			return encodePosition("value_out_of_range", path+"/"+f.name, int(starts[i]), int(starts[i]))
+		}
+		// Encode into a scratch encoder, then copy over the placeholder.
+		scratch := encoder{plan: e.plan, ctx: e.ctx}
+		if err := scratch.integer(f, s, path+"/"+f.name); err != nil {
+			return err
+		}
+		copy(e.out[starts[i]:ends[i]], scratch.out)
+	}
+	return nil
+}
+
+// member encodes one ordinary (non-derived) field.
+func (e *encoder) member(fields []field, m map[string]any, f field, v any, present bool, i int, p string, observed []string, members *int) error {
+	if f.when != nil && observed[f.when.ref] != f.when.equals {
+		if present {
 			return encodeFailure("invalid_document", p)
 		}
-		size := len(f.name) + 3
-		if members > 0 {
-			size++
-		}
-		members++
-		if err := e.budget(p, 0, size); err != nil {
-			return err
-		}
-		if _, _, isInt := integer(f.kind); isInt {
-			s, ok := v.(string)
-			if !ok {
-				return encodeFailure("invalid_document", p)
-			}
-			if err := e.stringBudget(p, s); err != nil {
-				return err
-			}
-			if err := e.integer(f, s, p); err != nil {
-				return err
-			}
-			observed[i] = s
-			continue
-		}
-		if f.kind == "repeat" {
-			if err := e.repeat(f, v, p); err != nil {
-				return err
-			}
-			continue
-		}
-		n, err := e.dimension(f, observed, p)
-		if err != nil {
-			return err
-		}
-		if f.kind == "array" {
-			a, ok := v.([]any)
-			if !ok || a == nil {
-				return encodeFailure("invalid_document", p)
-			}
-			if len(a) != n {
-				return encodeFailure("count_mismatch", p)
-			}
-			if n > e.plan.limits.MaxValueNodes-e.nodes-1 {
-				return encodeFailure("limit_exceeded", p)
-			}
-			size := 2
-			if n > 0 {
-				size += n - 1
-			}
-			if err := e.budget(p, 1, size); err != nil {
-				return err
-			}
-			for j, item := range a {
-				child := p + "/" + strconv.Itoa(j)
-				obj, ok := item.(map[string]any)
-				if !ok {
-					return encodeFailure("invalid_document", child)
-				}
-				if err := e.object(f.children, obj, child); err != nil {
-					return err
-				}
-			}
-			continue
-		}
+		return nil
+	}
+	if !present || v == nil {
+		return encodeFailure("invalid_document", p)
+	}
+	size := len(f.name) + 3
+	if *members > 0 {
+		size++
+	}
+	*members++
+	if err := e.budget(p, 0, size); err != nil {
+		return err
+	}
+	if _, _, isInt := integer(f.kind); isInt {
 		s, ok := v.(string)
-		if !ok || !utf8.ValidString(s) {
+		if !ok {
 			return encodeFailure("invalid_document", p)
 		}
 		if err := e.stringBudget(p, s); err != nil {
 			return err
 		}
-		if f.kind == "bytes" {
-			if len(s)%2 != 0 {
+		if err := e.integer(f, s, p); err != nil {
+			return err
+		}
+		observed[i] = s
+		return nil
+	}
+	if f.kind == "repeat" {
+		return e.repeat(f, v, p)
+	}
+	n, err := e.dimension(f, observed, p)
+	if err != nil {
+		return err
+	}
+	if f.kind == "array" {
+		a, ok := v.([]any)
+		if !ok || a == nil {
+			return encodeFailure("invalid_document", p)
+		}
+		if len(a) != n {
+			return encodeFailure("count_mismatch", p)
+		}
+		if n > e.plan.limits.MaxValueNodes-e.nodes-1 {
+			return encodeFailure("limit_exceeded", p)
+		}
+		size := 2
+		if n > 0 {
+			size += n - 1
+		}
+		if err := e.budget(p, 1, size); err != nil {
+			return err
+		}
+		for j, item := range a {
+			child := p + "/" + strconv.Itoa(j)
+			obj, ok := item.(map[string]any)
+			if !ok {
+				return encodeFailure("invalid_document", child)
+			}
+			if err := e.object(f.children, obj, child); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	s, ok := v.(string)
+	if !ok || !utf8.ValidString(s) {
+		return encodeFailure("invalid_document", p)
+	}
+	if err := e.stringBudget(p, s); err != nil {
+		return err
+	}
+	if f.kind == "bytes" {
+		if len(s)%2 != 0 {
+			return encodeFailure("invalid_document", p)
+		}
+		for j := range s {
+			b := s[j]
+			if !(b >= '0' && b <= '9' || b >= 'a' && b <= 'f') {
 				return encodeFailure("invalid_document", p)
 			}
-			for j := range s {
-				b := s[j]
-				if !(b >= '0' && b <= '9' || b >= 'a' && b <= 'f') {
-					return encodeFailure("invalid_document", p)
-				}
-			}
-			if len(s)/2 != n {
-				return encodeFailure("value_out_of_range", p)
-			}
-			if f.hasExpect && s != f.expect {
-				index := 0
-				for s[index] == f.expect[index] {
-					index++
-				}
-				return encodePosition("constraint_mismatch", p, len(e.out), len(e.out)+index/2)
-			}
-			if err := e.output(p, n); err != nil {
-				return err
-			}
-			start := len(e.out)
-			e.out = append(e.out, make([]byte, n)...)
-			_, _ = hex.Decode(e.out[start:], []byte(s))
-		} else {
-			if len(s) != n {
-				return encodeFailure("value_out_of_range", p)
-			}
-			if f.encoding == "ascii" {
-				for j := range s {
-					if s[j] >= 128 {
-						return encodePosition("invalid_encoding", p, len(e.out), len(e.out)+j)
-					}
-				}
-			}
-			if err := e.output(p, n); err != nil {
-				return err
-			}
-			e.out = append(e.out, s...)
 		}
+		if len(s)/2 != n {
+			return encodeFailure("value_out_of_range", p)
+		}
+		if f.hasExpect && s != f.expect {
+			index := 0
+			for s[index] == f.expect[index] {
+				index++
+			}
+			return encodePosition("constraint_mismatch", p, len(e.out), len(e.out)+index/2)
+		}
+		if err := e.output(p, n); err != nil {
+			return err
+		}
+		start := len(e.out)
+		e.out = append(e.out, make([]byte, n)...)
+		_, _ = hex.Decode(e.out[start:], []byte(s))
+	} else {
+		if len(s) != n {
+			return encodeFailure("value_out_of_range", p)
+		}
+		if f.encoding == "ascii" {
+			for j := range s {
+				if s[j] >= 128 {
+					return encodePosition("invalid_encoding", p, len(e.out), len(e.out)+j)
+				}
+			}
+		}
+		if err := e.output(p, n); err != nil {
+			return err
+		}
+		e.out = append(e.out, s...)
 	}
 	return nil
 }

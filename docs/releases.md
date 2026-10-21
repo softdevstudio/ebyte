@@ -1,6 +1,6 @@
 # EByte releases
 
-EByte v0.1.0 was the first implemented release under Apache License 2.0; v0.1.1 is a fix release and v0.2.0 adds repeating blocks. Public release titles use EByte vX.Y.Z and archives have no version in their filenames. Linux amd64/arm64 and macOS amd64/arm64 use tar.gz; Windows amd64 uses zip. Each archive contains the CLI, manual, license/notice files, examples, release.json and GO-NOTICES from the exact building toolchain. No external Go modules are linked.
+EByte v0.1.0 was the first implemented release under Apache License 2.0; v0.1.1 is a fix release v0.2.0 adds repeating blocks and v0.3.0 derived sizes and offsets. Public release titles use EByte vX.Y.Z and archives have no version in their filenames. Linux amd64/arm64 and macOS amd64/arm64 use tar.gz; Windows amd64 uses zip. Each archive contains the CLI, manual, license/notice files, examples, release.json and GO-NOTICES from the exact building toolchain. No external Go modules are linked.
 
 Release waits for successful Linux/macOS CI on the same current main-push SHA. Workflow actions are pinned to commit SHAs and Python to 3.13, and post-publication API reads are authenticated when a token is available while asset downloads stay anonymous. Independent review is a session gate recorded in CLAUDE.md. Separate packaging jobs test the library and native CLI on Linux, macOS and Windows. Native binaries are checked again after extraction; the other architectures are explicitly cross-built and unexecuted. release.json and RELEASE-MANIFEST.json record actual host verification rather than implying every archive ran natively. A clean checkout and embedded Go VCS revision bind binaries to the tested source. Build candidates using --local are forbidden in Actions and rejected by the publication validator.
 
@@ -13,6 +13,14 @@ Windows supports file input and stdin/stdout but --output FILE publication delib
 ## Changes
 
 Release notes include the section for their own version from this list.
+
+### EByte v0.3.0
+
+- derive gains size_of (one sibling or a from/to range of siblings), offset_of a sibling, count_of a repeat and an optional add, all calculated on encode.
+- A size_of that a later bytes or string field takes its length from is written from that field's value, like count_of for arrays.
+- Measured sizes, offsets and counts are checked on decode: a stale value fails with constraint_mismatch instead of round-tripping silently.
+- The library schemas now derive WAV, BMP and ZIP sizes, counts and directory offsets; per-entry ZIP local header offsets and CRC-32 are still edited by hand.
+- An eighth fuzz target checks derived values against the encoded bytes independently of the codec.
 
 ### EByte v0.2.0
 

@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"math"
 	"strconv"
 	"unicode/utf8"
 )
@@ -161,8 +162,11 @@ func (d *decoder) object(fields []field, path string) (values map[string]any, er
 	defer func() { err = d.finish(index, err) }()
 	values = map[string]any{}
 	observed := make([]string, len(fields))
+	// Field spans and trace entries, for checking measured integers at the end.
+	starts, ends, entries := make([]int64, len(fields)), make([]int64, len(fields)), make([]int, len(fields))
 	for i, f := range fields {
 		fieldPath := path + "/" + f.name
+		starts[i], ends[i] = d.pos, d.pos
 		if e = d.cancel(fieldPath, &d.pos); e != nil {
 			return nil, e
 		}
@@ -171,7 +175,7 @@ func (d *decoder) object(fields []field, path string) (values map[string]any, er
 		}
 		// Count the member name, colon and separator before allocating its value.
 		memberBytes := 0
-		if f.derive < 0 {
+		if !f.derived() {
 			memberBytes = len(f.name) + 3
 			if len(values) > 0 {
 				memberBytes++
@@ -180,16 +184,47 @@ func (d *decoder) object(fields []field, path string) (values map[string]any, er
 		if e = d.documentBudget(fieldPath, &d.pos, 0, memberBytes); e != nil {
 			return nil, e
 		}
+		entries[i] = len(d.trace.Entries)
 		value, integerValue, e := d.value(f, fieldPath, observed)
 		if e != nil {
 			return nil, e
 		}
+		ends[i] = d.pos
 		observed[i] = integerValue
-		if f.derive < 0 {
+		if !f.derived() {
 			values[f.name] = value
 		}
 	}
+	for i, f := range fields {
+		if f.measure == nil {
+			continue
+		}
+		if measured(f.measure, starts, ends, values, fields) != observed[i] {
+			d.trace.Entries[entries[i]].State = "failed"
+			return nil, d.diagnostic("constraint_mismatch", path+"/"+f.name, &starts[i], starts[i], "stored value equals measured fields", "stored value differs")
+		}
+	}
 	return values, nil
+}
+
+// measured calculates a measured integer from sibling spans as a decimal
+// string, or "" when the result is negative.
+func measured(m *measure, starts, ends []int64, values map[string]any, fields []field) string {
+	var n int64
+	switch m.kind {
+	case "size":
+		n = ends[m.to] - starts[m.from]
+	case "offset":
+		n = starts[m.from]
+	default:
+		a, _ := values[fields[m.from].name].([]any)
+		n = int64(len(a))
+	}
+	// Spans are bounded by the input ceiling, so only add can overflow.
+	if (m.add > 0 && n > math.MaxInt64-m.add) || n+m.add < 0 {
+		return ""
+	}
+	return strconv.FormatInt(n+m.add, 10)
 }
 func (d *decoder) dimension(f field, observed []string, path string) (int, error) {
 	n := f.length.literal
@@ -222,7 +257,7 @@ func (d *decoder) value(f field, path string, observed []string) (value any, int
 	defer func() { err = d.finish(index, err) }()
 	bits, unsigned, isInt := integer(f.kind)
 	if isInt {
-		if f.derive < 0 {
+		if !f.derived() {
 			if e = d.documentBudget(path, &start, 1, 3); e != nil {
 				return nil, "", e
 			}
@@ -255,7 +290,7 @@ func (d *decoder) value(f field, path string, observed []string) (value any, int
 		if f.hasExpect && s != f.expect {
 			return nil, "", d.diagnostic("constraint_mismatch", path, &start, start, "integer assertion satisfied", "integer assertion failed")
 		}
-		if f.derive < 0 {
+		if !f.derived() {
 			if e = d.documentBudget(path, &start, 0, len(s)-1); e != nil {
 				return nil, "", e
 			}

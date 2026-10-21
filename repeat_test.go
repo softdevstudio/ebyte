@@ -259,7 +259,7 @@ func TestRepeatSchemaRules(t *testing.T) {
 		{"tag longer than 16 bytes", `{"name":"r","type":"repeat","until":"tag_mismatch","fields":[{"name":"a","type":"bytes","length":17,"expect":"` + strings.Repeat("41", 17) + `"}]}`, "/fields/0/fields/0"},
 		{"no element fields", `{"name":"r","type":"repeat","until":"tag_mismatch","fields":[]}`, "/fields/0/fields"},
 		{"repeat with a count", `{"name":"r","type":"repeat","until":"end_of_input","count":1,"fields":[{"name":"a","type":"u8"}]}`, "/fields/0"},
-		{"count_of a repeat", `{"name":"n","type":"u8","derive":{"count_of":"r"}},` + tagged, "/fields/0/derive/count_of"},
+		{"repeat count used as a length", `{"name":"n","type":"u8","derive":{"count_of":"r"}},` + tagged + `,{"name":"b","type":"bytes","length":{"field":"n"}}`, "/fields/0/derive/count_of"},
 	} {
 		_, e := Compile([]byte(head+c.fields+`]}`), DefaultLimits())
 		if e == nil {

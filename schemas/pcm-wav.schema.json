@@ -4,7 +4,7 @@
   "endian": "little",
   "fields": [
     {"name": "riff", "type": "bytes", "length": 4, "expect": "52494646"},
-    {"name": "riff_size", "type": "u32"},
+    {"name": "riff_size", "type": "u32", "derive": {"size_of": {"from": "wave", "to": "samples"}}},
     {"name": "wave", "type": "bytes", "length": 4, "expect": "57415645"},
     {"name": "fmt_id", "type": "bytes", "length": 4, "expect": "666d7420"},
     {"name": "fmt_size", "type": "u32", "expect": "16"},
@@ -15,7 +15,7 @@
     {"name": "block_align", "type": "u16"},
     {"name": "bits_per_sample", "type": "u16"},
     {"name": "data_id", "type": "bytes", "length": 4, "expect": "64617461"},
-    {"name": "data_size", "type": "u32"},
+    {"name": "data_size", "type": "u32", "derive": {"size_of": "samples"}},
     {"name": "samples", "type": "bytes", "length": {"field": "data_size"}}
   ]
 }

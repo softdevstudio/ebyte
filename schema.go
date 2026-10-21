@@ -69,11 +69,29 @@ type field struct {
 	length                               dimension
 	children                             []field
 	when                                 *condition
-	derive                               int
+	// derive is the index of the sibling a driving derived integer is
+	// calculated from (count_of an array, size_of the field it sizes), or -1.
+	derive int
+	// measure is set for a measured derived integer (size, offset or repeat
+	// count of siblings); it drives nothing and is checked on decode.
+	measure *measure
 	// until is set for repeat fields: "end_of_input" or "tag_mismatch".
 	until string
 	tag   []byte
 }
+
+// measure describes a measured derived integer: the byte size of siblings
+// from..to inclusive, the offset of sibling from, or the element count of
+// repeat sibling from, plus add.
+type measure struct {
+	kind     string // "size", "offset" or "count"
+	from, to int
+	add      int64
+}
+
+// derived reports whether a field is calculated by the encoder and therefore
+// absent from editable values.
+func (f field) derived() bool { return f.derive >= 0 || f.measure != nil }
 
 // Repeat stop rules. A tag_mismatch repeat's first child is a fixed-length
 // bytes field with expect; elements continue while the next bytes equal it.
@@ -186,7 +204,7 @@ func validEscapes(raw []byte) bool {
 func safePath(path, key string) string {
 	// Only grammar member names enter diagnostics; arbitrary unknown keys stay private.
 	switch key {
-	case "schema_version", "name", "endian", "fields", "type", "length", "count", "encoding", "expect", "when", "derive", "field", "equals", "count_of", "until":
+	case "schema_version", "name", "endian", "fields", "type", "length", "count", "encoding", "expect", "when", "derive", "field", "equals", "count_of", "size_of", "offset_of", "from", "to", "add", "until":
 		return path + "/" + key
 	}
 	return path
@@ -476,37 +494,144 @@ func compileFields(v any, path string, depth int, endian string, limits Limits, 
 			if !ok {
 				return nil, failure("invalid_schema", p+"/derive")
 			}
-			if e := members(obj, p+"/derive", []string{"count_of"}, nil); e != nil {
+			forms := 0
+			for _, k := range []string{"count_of", "size_of", "offset_of"} {
+				if _, ok := obj[k]; ok {
+					forms++
+				}
+			}
+			if forms != 1 {
+				return nil, failure("invalid_schema", p+"/derive")
+			}
+			if e := members(obj, p+"/derive", nil, []string{"count_of", "size_of", "offset_of", "add"}); e != nil {
 				return nil, e
 			}
-			target, ok := obj["count_of"].(string)
-			if !ok || !identifier.MatchString(target) {
-				return nil, failure("invalid_schema", p+"/derive/count_of")
-			}
+			// Resolved after all siblings are known; -2 marks it pending.
 			f.derive = -2
 		}
 		out = append(out, f)
 	}
 	for i := range out {
-		if out[i].derive != -2 {
-			continue
-		}
-		obj := a[i].(map[string]any)["derive"].(map[string]any)
-		target := obj["count_of"].(string)
-		found := -1
-		uses := 0
-		for j, f := range out {
-			if f.length.dynamic && (f.kind == "array" || f.kind == "bytes" || f.kind == "string") && f.length.ref == i {
-				uses++
-			}
-			if j > i && f.name == target && f.kind == "array" && f.when == nil && f.length.dynamic && f.length.ref == i {
-				found = j
+		if out[i].derive == -2 {
+			if e := resolveDerive(out, i, a[i].(map[string]any)["derive"].(map[string]any), fmt.Sprintf("%s/%d/derive", path, i)); e != nil {
+				return nil, e
 			}
 		}
-		if found < 0 || uses != 1 {
-			return nil, failure("invalid_schema", fmt.Sprintf("%s/%d/derive/count_of", path, i))
-		}
-		out[i].derive = found
 	}
 	return out, nil
+}
+
+// resolveDerive decides whether a derived integer drives one later sibling
+// (count_of an array, size_of a field whose length it is) or measures
+// siblings, and checks how other fields use it.
+func resolveDerive(out []field, i int, obj map[string]any, path string) error {
+	sibling := func(v any, key string) (int, error) {
+		name, ok := v.(string)
+		if ok {
+			for j, f := range out {
+				if f.name == name {
+					return j, nil
+				}
+			}
+		}
+		return 0, failure("invalid_schema", path+"/"+key)
+	}
+	lengthUses, whenUses := 0, 0
+	for _, f := range out {
+		if f.length.dynamic && (f.kind == "array" || f.kind == "bytes" || f.kind == "string") && f.length.ref == i {
+			lengthUses++
+		}
+		if f.when != nil && f.when.ref == i {
+			whenUses++
+		}
+	}
+	drives := func(j int, kinds ...string) bool {
+		f := out[j]
+		for _, k := range kinds {
+			if f.kind == k && j > i && f.when == nil && f.length.dynamic && f.length.ref == i {
+				return true
+			}
+		}
+		return false
+	}
+	var m measure
+	key := ""
+	switch {
+	case obj["count_of"] != nil:
+		key = "count_of"
+		j, e := sibling(obj[key], key)
+		if e != nil {
+			return e
+		}
+		if out[j].kind == "repeat" {
+			m = measure{kind: "count", from: j, to: j}
+			break
+		}
+		if !drives(j, "array") || lengthUses != 1 {
+			return failure("invalid_schema", path+"/"+key)
+		}
+		if _, ok := obj["add"]; ok {
+			return failure("invalid_schema", path+"/add")
+		}
+		out[i].derive = j
+		return nil
+	case obj["offset_of"] != nil:
+		key = "offset_of"
+		j, e := sibling(obj[key], key)
+		if e != nil {
+			return e
+		}
+		m = measure{kind: "offset", from: j, to: j}
+	default:
+		key = "size_of"
+		if r, ok := obj[key].(map[string]any); ok {
+			if e := members(r, path+"/"+key, []string{"from", "to"}, nil); e != nil {
+				return e
+			}
+			from, e := sibling(r["from"], key+"/from")
+			if e != nil {
+				return e
+			}
+			to, e := sibling(r["to"], key+"/to")
+			if e != nil {
+				return e
+			}
+			if from > to {
+				return failure("invalid_schema", path+"/"+key)
+			}
+			m = measure{kind: "size", from: from, to: to}
+			break
+		}
+		j, e := sibling(obj[key], key)
+		if e != nil {
+			return e
+		}
+		if out[j].length.dynamic && out[j].length.ref == i {
+			if !drives(j, "bytes", "string") || lengthUses != 1 {
+				return failure("invalid_schema", path+"/"+key)
+			}
+			if _, ok := obj["add"]; ok {
+				return failure("invalid_schema", path+"/add")
+			}
+			out[i].derive = j
+			return nil
+		}
+		m = measure{kind: "size", from: j, to: j}
+	}
+	// A measured value is only known once its object is complete, so nothing
+	// may read it to decide how to read input.
+	if lengthUses != 0 || whenUses != 0 {
+		return failure("invalid_schema", path+"/"+key)
+	}
+	if v, ok := obj["add"]; ok {
+		s, ok := v.(string)
+		n, e := strconv.ParseInt(s, 10, 64)
+		if !ok || e != nil || !decimal.MatchString(s) {
+			return failure("invalid_schema", path+"/add")
+		}
+		m.add = n
+	}
+	out[i].derive = -1
+	out[i].measure = &m
+	return nil
 }
