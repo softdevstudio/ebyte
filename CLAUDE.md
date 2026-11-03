@@ -108,11 +108,11 @@ Design decisions:
 - Version 0.8.0.
 
 Steps:
-1. [ ] Phase 0: this plan.
-2. [ ] Phase B: element_of offsets, schema rules, decode, encode, fixtures, fuzz, zip schema.
-3. [ ] Phase A: YAML subset reader, kaitai package, import-ksy CLI, oracle fixtures, gallery count.
-4. [ ] Upkeep: record workflow, README.
-5. [ ] Docs: schema-v1, cli, kaitai reference, README, schemas/README.
+1. [x] Phase 0: this plan (36445c2).
+2. [x] Phase B (ac97618): element_of offsets, schema rules, decode, encode; element_test.go (hand-laid golden and edited layout, stale values and count mismatches, forward and nested containers, ten schema refusals, FuzzElementOffsets); zip.schema.json derives every local_header_offset (three.zip round-trips; a renamed entry checked with Python zipfile).
+3. [x] Phase A (a95c98a): kaitai/yaml.go reads all 191 gallery files to the same structure as js-yaml 4.1.0 (failsafe schema); kaitai/import.go and `ebyte import-ksy`; enum::member resolved in if and valid. 9 of 191 gallery files import (kaitai_struct_formats 7d17566): monomakh_sapr_chg, android_nanoapp_header, mbr_partition_table, shapefile_index, aix_utmp, glibc_utmp, stl, vp8_duck_ivf, windows_systemtime. Each is checked against the Kaitai compiler and JS runtime 0.11.0 on a sample built by generate.cjs, value for value, and round-trips. FuzzImport found one panic (a `- ` item holding only a tab), fixed. The plan's 'big library overnight' does not hold: most gallery files need instances at positions, switch-on or expressions.
+4. [x] Upkeep: record workflow, README (nine schemas, Windows publication and CI sentences).
+5. [x] Docs: schema-v1, cli, kaitai.md, testing, releases (v0.8.0 notes), README, schemas/README, THIRD_PARTY_LICENSES (gallery test files).
 6. [ ] Independent review (at most two rounds), fixes, fresh results.
 7. [ ] 0.8.0 released by the workflow; assets checked at tag and latest; downloaded binary run.
 8. [ ] ebyte.org case study and pages; softdevstudio.com note; softdev-plan item 27 done.
