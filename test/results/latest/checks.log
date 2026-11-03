@@ -1,30 +1,44 @@
-UTC: 2026-10-20T11:43:09Z
+UTC: 2026-11-03T10:32:35Z
 go version go1.27.3 linux/amd64
 linux
 amd64
 1
-Source SHA256: bed4d3352e0902fa156b5f3eaae30cc2bd6b9085c5f279564fa9ffcdd046d0d5
+Source SHA256: 6dac94500a516b53d03273dbc6aa13cbe52875be29d8bfa01539f67b3085459d
 test_archive_paths_and_links_are_refused (test_release.ReleaseSafetyTests.test_archive_paths_and_links_are_refused) ... ok
 test_failed_cleanup_is_reported (test_release.ReleaseSafetyTests.test_failed_cleanup_is_reported) ... ok
 test_failed_upload_cleans_only_owned_draft_and_tag (test_release.ReleaseSafetyTests.test_failed_upload_cleans_only_owned_draft_and_tag) ... ok
+test_leftover_draft_blocks_a_second_publication (test_release.ReleaseSafetyTests.test_leftover_draft_blocks_a_second_publication) ... ok
 test_public_verification_failure_keeps_published_release (test_release.ReleaseSafetyTests.test_public_verification_failure_keeps_published_release) ... ok
 test_redirects_strip_credentials_and_refuse_http (test_release.ReleaseSafetyTests.test_redirects_strip_credentials_and_refuse_http) ... ok
+test_releases_for_finds_untagged_drafts_and_pages (test_release.ReleaseSafetyTests.test_releases_for_finds_untagged_drafts_and_pages) ... ok
+test_wasm_check_accepts_a_consistent_build_and_refuses_tampering (test_release.ReleaseSafetyTests.test_wasm_check_accepts_a_consistent_build_and_refuses_tampering) ... ok
+test_wasm_smoke_skip_is_refused_in_actions (test_release.ReleaseSafetyTests.test_wasm_smoke_skip_is_refused_in_actions) ... ok
 test_does_not_follow_links_inside_latest (test_results.LatestResultsTests.test_does_not_follow_links_inside_latest) ... ok
 test_rejects_files_without_removal (test_results.LatestResultsTests.test_rejects_files_without_removal) ... ok
 test_rejects_symlink_at_every_managed_component (test_results.LatestResultsTests.test_rejects_symlink_at_every_managed_component) ... ok
 test_replaces_latest_and_preserves_release_evidence (test_results.LatestResultsTests.test_replaces_latest_and_preserves_release_evidence) ... ok
 
 ----------------------------------------------------------------------
-Ran 9 tests in 0.012s
+Ran 13 tests in 0.043s
 
 OK
+=== RUN   TestChecksumCheckValues
+--- PASS: TestChecksumCheckValues (0.00s)
+=== RUN   TestChecksumPNGChunks
+--- PASS: TestChecksumPNGChunks (0.00s)
+=== RUN   TestChecksumBeforeItsRangeAndAfterSizes
+--- PASS: TestChecksumBeforeItsRangeAndAfterSizes (0.00s)
+=== RUN   TestChecksumSchemaRules
+--- PASS: TestChecksumSchemaRules (0.00s)
+=== RUN   TestChecksumRangeEdges
+--- PASS: TestChecksumRangeEdges (0.00s)
 === RUN   TestDecodeIndependentGoldens
 === RUN   TestDecodeIndependentGoldens/packet
 === RUN   TestDecodeIndependentGoldens/wide
 === RUN   TestDecodeIndependentGoldens/empty
 === RUN   TestDecodeIndependentGoldens/stored
 --- PASS: TestDecodeIndependentGoldens (0.01s)
-    --- PASS: TestDecodeIndependentGoldens/packet (0.00s)
+    --- PASS: TestDecodeIndependentGoldens/packet (0.01s)
     --- PASS: TestDecodeIndependentGoldens/wide (0.00s)
     --- PASS: TestDecodeIndependentGoldens/empty (0.00s)
     --- PASS: TestDecodeIndependentGoldens/stored (0.00s)
@@ -80,12 +94,40 @@ OK
 --- PASS: TestUnexpectedEOFIsTruncation (0.00s)
 === RUN   TestConditionalZeroWidthNodeCeilings
 --- PASS: TestConditionalZeroWidthNodeCeilings (0.00s)
+=== RUN   TestDiagnosticFieldStartDoesNotAliasDecoder
+--- PASS: TestDiagnosticFieldStartDoesNotAliasDecoder (0.00s)
+=== RUN   TestDeriveGolden
+--- PASS: TestDeriveGolden (0.00s)
+=== RUN   TestDeriveStaleValuesFailDecode
+--- PASS: TestDeriveStaleValuesFailDecode (0.00s)
+=== RUN   TestDeriveOffsetsAreAbsolute
+--- PASS: TestDeriveOffsetsAreAbsolute (0.00s)
+=== RUN   TestDeriveEncodeFailures
+--- PASS: TestDeriveEncodeFailures (0.00s)
+=== RUN   TestDeriveSchemaRules
+--- PASS: TestDeriveSchemaRules (0.00s)
+=== RUN   TestDiffGolden
+--- PASS: TestDiffGolden (0.00s)
+=== RUN   TestDiffConditionsAndBytes
+--- PASS: TestDiffConditionsAndBytes (0.00s)
+=== RUN   TestDiffFailures
+--- PASS: TestDiffFailures (0.00s)
+=== RUN   TestElementOffsetsGolden
+--- PASS: TestElementOffsetsGolden (0.00s)
+=== RUN   TestElementOffsetsFailDecode
+--- PASS: TestElementOffsetsFailDecode (0.00s)
+=== RUN   TestElementOffsetsForwardAndNested
+--- PASS: TestElementOffsetsForwardAndNested (0.00s)
+=== RUN   TestElementOffsetSchemaRules
+--- PASS: TestElementOffsetSchemaRules (0.00s)
+=== RUN   TestElementOffsetsOptionalIndex
+--- PASS: TestElementOffsetsOptionalIndex (0.00s)
 === RUN   TestIndependentEncodeGoldensAndRoundTrips
 === RUN   TestIndependentEncodeGoldensAndRoundTrips/packet
 === RUN   TestIndependentEncodeGoldensAndRoundTrips/wide
 === RUN   TestIndependentEncodeGoldensAndRoundTrips/empty
 === RUN   TestIndependentEncodeGoldensAndRoundTrips/stored
---- PASS: TestIndependentEncodeGoldensAndRoundTrips (0.00s)
+--- PASS: TestIndependentEncodeGoldensAndRoundTrips (0.01s)
     --- PASS: TestIndependentEncodeGoldensAndRoundTrips/packet (0.00s)
     --- PASS: TestIndependentEncodeGoldensAndRoundTrips/wide (0.00s)
     --- PASS: TestIndependentEncodeGoldensAndRoundTrips/empty (0.00s)
@@ -94,7 +136,7 @@ OK
 === RUN   TestEncodeAcceptanceVectors/derived_count_edit
 === RUN   TestEncodeAcceptanceVectors/derived_value_forbidden
 === RUN   TestEncodeAcceptanceVectors/stored_count_mismatch
---- PASS: TestEncodeAcceptanceVectors (0.00s)
+--- PASS: TestEncodeAcceptanceVectors (0.01s)
     --- PASS: TestEncodeAcceptanceVectors/derived_count_edit (0.00s)
     --- PASS: TestEncodeAcceptanceVectors/derived_value_forbidden (0.00s)
     --- PASS: TestEncodeAcceptanceVectors/stored_count_mismatch (0.00s)
@@ -120,7 +162,7 @@ OK
 === RUN   TestEncodeRejectsEditsBeforeWriting/invalid_UTF8
 === RUN   TestEncodeRejectsEditsBeforeWriting/bad_element
 === RUN   TestEncodeRejectsEditsBeforeWriting/array_null
---- PASS: TestEncodeRejectsEditsBeforeWriting (0.01s)
+--- PASS: TestEncodeRejectsEditsBeforeWriting (0.02s)
     --- PASS: TestEncodeRejectsEditsBeforeWriting/derived_present (0.00s)
     --- PASS: TestEncodeRejectsEditsBeforeWriting/inactive_present (0.00s)
     --- PASS: TestEncodeRejectsEditsBeforeWriting/missing_active (0.00s)
@@ -143,7 +185,7 @@ OK
 === RUN   TestEncodeWriterErrorsAndCancellation
 --- PASS: TestEncodeWriterErrorsAndCancellation (0.00s)
 === RUN   TestEncodeBudgets
---- PASS: TestEncodeBudgets (0.00s)
+--- PASS: TestEncodeBudgets (0.01s)
 === RUN   TestCountDimensionsAndNestedRoundTrip
 --- PASS: TestCountDimensionsAndNestedRoundTrip (0.00s)
 === RUN   TestDerivedCountOverflowAndZero
@@ -182,6 +224,34 @@ OK
 --- PASS: TestHugeDimensionsDoNotReadPayload (0.00s)
 === RUN   TestUTF8BoundaryFailures
 --- PASS: TestUTF8BoundaryFailures (0.00s)
+=== RUN   TestFloatGolden
+--- PASS: TestFloatGolden (0.00s)
+=== RUN   TestFloatEncodeRules
+--- PASS: TestFloatEncodeRules (0.00s)
+=== RUN   TestBitFieldsGolden
+--- PASS: TestBitFieldsGolden (0.00s)
+=== RUN   TestBitFieldsWithMeasuredValues
+--- PASS: TestBitFieldsWithMeasuredValues (0.00s)
+=== RUN   TestUntilOffset
+--- PASS: TestUntilOffset (0.00s)
+=== RUN   TestNewTypeSchemaRules
+--- PASS: TestNewTypeSchemaRules (0.00s)
+=== RUN   TestRepeatUntilEndGolden
+--- PASS: TestRepeatUntilEndGolden (0.00s)
+=== RUN   TestRepeatUntilTagGolden
+--- PASS: TestRepeatUntilTagGolden (0.00s)
+=== RUN   TestRepeatDecodeFailures
+--- PASS: TestRepeatDecodeFailures (0.00s)
+=== RUN   TestRepeatEncodeFailuresAndEdits
+--- PASS: TestRepeatEncodeFailuresAndEdits (0.00s)
+=== RUN   TestRepeatSchemaRules
+--- PASS: TestRepeatSchemaRules (0.00s)
+=== RUN   TestRepeatLibrarySamples
+--- PASS: TestRepeatLibrarySamples (0.01s)
+=== RUN   TestRepeatLookAheadEdges
+--- PASS: TestRepeatLookAheadEdges (0.00s)
+=== RUN   TestSchemaLibrarySamples
+--- PASS: TestSchemaLibrarySamples (0.02s)
 === RUN   TestCompileGolden
 === RUN   TestCompileGolden/packet
 === RUN   TestCompileGolden/wide
@@ -231,13 +301,41 @@ OK
     --- PASS: TestCompileAcceptanceVectors/null_schema_fields (0.00s)
     --- PASS: TestCompileAcceptanceVectors/unknown_condition_reference (0.00s)
 === RUN   TestDeclarationAndDepthBoundaries
---- PASS: TestDeclarationAndDepthBoundaries (0.02s)
+--- PASS: TestDeclarationAndDepthBoundaries (0.04s)
 === RUN   TestInvalidBindings
 --- PASS: TestInvalidBindings (0.00s)
+=== RUN   FuzzChecksums
+=== RUN   FuzzChecksums/seed#0
+=== RUN   FuzzChecksums/seed#1
+--- PASS: FuzzChecksums (0.00s)
+    --- PASS: FuzzChecksums/seed#0 (0.00s)
+    --- PASS: FuzzChecksums/seed#1 (0.00s)
 === RUN   FuzzDecodePacket
 === RUN   FuzzDecodePacket/seed#0
 --- PASS: FuzzDecodePacket (0.00s)
     --- PASS: FuzzDecodePacket/seed#0 (0.00s)
+=== RUN   FuzzDerivedSizes
+=== RUN   FuzzDerivedSizes/seed#0
+=== RUN   FuzzDerivedSizes/seed#1
+=== RUN   FuzzDerivedSizes/seed#2
+--- PASS: FuzzDerivedSizes (0.00s)
+    --- PASS: FuzzDerivedSizes/seed#0 (0.00s)
+    --- PASS: FuzzDerivedSizes/seed#1 (0.00s)
+    --- PASS: FuzzDerivedSizes/seed#2 (0.00s)
+=== RUN   FuzzDiff
+=== RUN   FuzzDiff/seed#0
+=== RUN   FuzzDiff/seed#1
+--- PASS: FuzzDiff (0.00s)
+    --- PASS: FuzzDiff/seed#0 (0.00s)
+    --- PASS: FuzzDiff/seed#1 (0.00s)
+=== RUN   FuzzElementOffsets
+=== RUN   FuzzElementOffsets/seed#0
+=== RUN   FuzzElementOffsets/seed#1
+=== RUN   FuzzElementOffsets/seed#2
+--- PASS: FuzzElementOffsets (0.00s)
+    --- PASS: FuzzElementOffsets/seed#0 (0.00s)
+    --- PASS: FuzzElementOffsets/seed#1 (0.00s)
+    --- PASS: FuzzElementOffsets/seed#2 (0.00s)
 === RUN   FuzzLoadAndEncode
 === RUN   FuzzLoadAndEncode/seed#0
 --- PASS: FuzzLoadAndEncode (0.00s)
@@ -260,6 +358,24 @@ OK
     --- PASS: FuzzLosslessShapes/seed#3 (0.00s)
     --- PASS: FuzzLosslessShapes/seed#4 (0.00s)
     --- PASS: FuzzLosslessShapes/seed#5 (0.00s)
+=== RUN   FuzzFloatsAndBits
+=== RUN   FuzzFloatsAndBits/seed#0
+=== RUN   FuzzFloatsAndBits/seed#1
+--- PASS: FuzzFloatsAndBits (0.00s)
+    --- PASS: FuzzFloatsAndBits/seed#0 (0.00s)
+    --- PASS: FuzzFloatsAndBits/seed#1 (0.00s)
+=== RUN   FuzzRepeat
+=== RUN   FuzzRepeat/seed#0
+=== RUN   FuzzRepeat/seed#1
+=== RUN   FuzzRepeat/seed#2
+=== RUN   FuzzRepeat/seed#3
+=== RUN   FuzzRepeat/seed#4
+--- PASS: FuzzRepeat (0.00s)
+    --- PASS: FuzzRepeat/seed#0 (0.00s)
+    --- PASS: FuzzRepeat/seed#1 (0.00s)
+    --- PASS: FuzzRepeat/seed#2 (0.00s)
+    --- PASS: FuzzRepeat/seed#3 (0.00s)
+    --- PASS: FuzzRepeat/seed#4 (0.00s)
 === RUN   FuzzCompile
 === RUN   FuzzCompile/seed#0
 === RUN   FuzzCompile/seed#1
@@ -269,21 +385,21 @@ OK
 === RUN   ExamplePlan_Encode
 --- PASS: ExamplePlan_Encode (0.00s)
 PASS
-ok  	github.com/softdevstudio/ebyte	1.123s
+ok  	github.com/softdevstudio/ebyte	1.245s
 === RUN   TestOperationalCommands
 === RUN   TestOperationalCommands/packet
 === RUN   TestOperationalCommands/wide
 === RUN   TestOperationalCommands/empty
 === RUN   TestOperationalCommands/stored
---- PASS: TestOperationalCommands (0.01s)
+--- PASS: TestOperationalCommands (0.02s)
     --- PASS: TestOperationalCommands/packet (0.00s)
     --- PASS: TestOperationalCommands/wide (0.00s)
     --- PASS: TestOperationalCommands/empty (0.00s)
     --- PASS: TestOperationalCommands/stored (0.00s)
 === RUN   TestFailedDecodeAndInspect
---- PASS: TestFailedDecodeAndInspect (0.00s)
+--- PASS: TestFailedDecodeAndInspect (0.01s)
 === RUN   TestCLIFilePublication
---- PASS: TestCLIFilePublication (0.01s)
+--- PASS: TestCLIFilePublication (0.03s)
 === RUN   TestCLIArgumentAndIOFailures
 --- PASS: TestCLIArgumentAndIOFailures (0.00s)
 === RUN   TestCLILimitsCancellationAndWriters
@@ -296,6 +412,18 @@ ok  	github.com/softdevstudio/ebyte	1.123s
 --- PASS: TestCancellationRetainsOutputWarning (0.00s)
 === RUN   TestCancellationPreservesPublicationAndLocationDetails
 --- PASS: TestCancellationPreservesPublicationAndLocationDetails (0.00s)
+=== RUN   TestUnexpectedEOFFromInputIsAnIOFailure
+--- PASS: TestUnexpectedEOFFromInputIsAnIOFailure (0.00s)
+=== RUN   TestRenderInspectKeepsDecodeFailure
+--- PASS: TestRenderInspectKeepsDecodeFailure (0.00s)
+=== RUN   TestDirectoryStyleOutputIsAUsageError
+--- PASS: TestDirectoryStyleOutputIsAUsageError (0.00s)
+=== RUN   TestDiffCommand
+--- PASS: TestDiffCommand (0.01s)
+=== RUN   TestDiffCancelledStdin
+--- PASS: TestDiffCancelledStdin (0.00s)
+=== RUN   TestImportKSYCommand
+--- PASS: TestImportKSYCommand (0.02s)
 === RUN   TestAvailableCommands
 --- PASS: TestAvailableCommands (0.00s)
 === RUN   TestInvalidArgumentsFailWithoutEcho
@@ -324,6 +452,7 @@ ok  	github.com/softdevstudio/ebyte	1.123s
 --- PASS: TestPublicationPinsRenamedParent (0.00s)
 === RUN   TestInjectedPublicationFailures
 === RUN   TestInjectedPublicationFailures/create
+=== RUN   TestInjectedPublicationFailures/chmod
 === RUN   TestInjectedPublicationFailures/sync
 === RUN   TestInjectedPublicationFailures/close
 === RUN   TestInjectedPublicationFailures/link
@@ -332,12 +461,19 @@ ok  	github.com/softdevstudio/ebyte	1.123s
 === RUN   TestInjectedPublicationFailures/cancel-after-sync
 --- PASS: TestInjectedPublicationFailures (0.01s)
     --- PASS: TestInjectedPublicationFailures/create (0.00s)
+    --- PASS: TestInjectedPublicationFailures/chmod (0.00s)
     --- PASS: TestInjectedPublicationFailures/sync (0.00s)
     --- PASS: TestInjectedPublicationFailures/close (0.00s)
     --- PASS: TestInjectedPublicationFailures/link (0.00s)
     --- PASS: TestInjectedPublicationFailures/cleanup-before-link (0.00s)
     --- PASS: TestInjectedPublicationFailures/cleanup-after-link (0.00s)
     --- PASS: TestInjectedPublicationFailures/cancel-after-sync (0.00s)
+=== RUN   TestPublicationRejectsDirectoryStyleDestinations
+--- PASS: TestPublicationRejectsDirectoryStyleDestinations (0.00s)
+=== RUN   TestPublishedFileUsesOutputMode
+--- PASS: TestPublishedFileUsesOutputMode (0.00s)
+=== RUN   TestDefaultOutputModeFollowsUmask
+--- PASS: TestDefaultOutputModeFollowsUmask (0.00s)
 === RUN   FuzzCLIArguments
 === RUN   FuzzCLIArguments/seed#0
 === RUN   FuzzCLIArguments/seed#1
@@ -347,51 +483,167 @@ ok  	github.com/softdevstudio/ebyte	1.123s
     --- PASS: FuzzCLIArguments/seed#1 (0.00s)
     --- PASS: FuzzCLIArguments/seed#2 (0.00s)
 PASS
-ok  	github.com/softdevstudio/ebyte/cmd/ebyte	1.069s
+ok  	github.com/softdevstudio/ebyte/cmd/ebyte	1.129s
 ?   	github.com/softdevstudio/ebyte/internal/resourcecheck	[no test files]
-fuzz: elapsed: 0s, gathering baseline coverage: 0/37 completed
-fuzz: elapsed: 0s, gathering baseline coverage: 37/37 completed, now fuzzing with 2 workers
-fuzz: elapsed: 3s, execs: 20439 (6810/sec), new interesting: 4 (total: 41)
-fuzz: elapsed: 6s, execs: 20439 (0/sec), new interesting: 4 (total: 41)
-fuzz: elapsed: 6s, execs: 20439 (0/sec), new interesting: 4 (total: 41)
+=== RUN   TestWebEnvelopes
+--- PASS: TestWebEnvelopes (0.02s)
 PASS
-ok  	github.com/softdevstudio/ebyte	6.027s
-fuzz: elapsed: 0s, gathering baseline coverage: 0/2 completed
-fuzz: elapsed: 0s, gathering baseline coverage: 2/2 completed, now fuzzing with 2 workers
-fuzz: elapsed: 3s, execs: 110413 (36798/sec), new interesting: 47 (total: 49)
-fuzz: elapsed: 6s, execs: 199853 (29809/sec), new interesting: 78 (total: 80)
-fuzz: elapsed: 6s, execs: 199853 (0/sec), new interesting: 78 (total: 80)
+ok  	github.com/softdevstudio/ebyte/internal/web	1.034s
+=== RUN   TestGalleryAgainstKaitai
+=== RUN   TestGalleryAgainstKaitai/aix_utmp
+=== RUN   TestGalleryAgainstKaitai/android_nanoapp_header
+=== RUN   TestGalleryAgainstKaitai/glibc_utmp
+=== RUN   TestGalleryAgainstKaitai/mbr_partition_table
+=== RUN   TestGalleryAgainstKaitai/monomakh_sapr_chg
+=== RUN   TestGalleryAgainstKaitai/shapefile_index
+=== RUN   TestGalleryAgainstKaitai/stl
+=== RUN   TestGalleryAgainstKaitai/vp8_duck_ivf
+=== RUN   TestGalleryAgainstKaitai/windows_systemtime
+--- PASS: TestGalleryAgainstKaitai (0.05s)
+    --- PASS: TestGalleryAgainstKaitai/aix_utmp (0.01s)
+    --- PASS: TestGalleryAgainstKaitai/android_nanoapp_header (0.00s)
+    --- PASS: TestGalleryAgainstKaitai/glibc_utmp (0.01s)
+    --- PASS: TestGalleryAgainstKaitai/mbr_partition_table (0.01s)
+    --- PASS: TestGalleryAgainstKaitai/monomakh_sapr_chg (0.00s)
+    --- PASS: TestGalleryAgainstKaitai/shapefile_index (0.01s)
+    --- PASS: TestGalleryAgainstKaitai/stl (0.01s)
+    --- PASS: TestGalleryAgainstKaitai/vp8_duck_ivf (0.01s)
+    --- PASS: TestGalleryAgainstKaitai/windows_systemtime (0.00s)
+=== RUN   TestImportMapping
+--- PASS: TestImportMapping (0.01s)
+=== RUN   TestImportUserTypes
+--- PASS: TestImportUserTypes (0.00s)
+=== RUN   TestImportRefusals
+--- PASS: TestImportRefusals (0.01s)
+=== RUN   TestYAMLSubset
+--- PASS: TestYAMLSubset (0.00s)
+=== RUN   TestGallerySurvey
+    import_test.go:359: KAITAI_GALLERY not set
+--- SKIP: TestGallerySurvey (0.00s)
+=== RUN   TestImportResolvesNamesAtDefinition
+--- PASS: TestImportResolvesNamesAtDefinition (0.00s)
+=== RUN   TestYAMLLongRunsAreLinear
+--- PASS: TestYAMLLongRunsAreLinear (0.27s)
+=== RUN   TestRefusalsDoNotEchoContent
+--- PASS: TestRefusalsDoNotEchoContent (0.00s)
+=== RUN   TestContentsItems
+--- PASS: TestContentsItems (0.01s)
+=== RUN   FuzzImport
+=== RUN   FuzzImport/seed#0
+=== RUN   FuzzImport/seed#1
+=== RUN   FuzzImport/seed#2
+=== RUN   FuzzImport/seed#3
+=== RUN   FuzzImport/seed#4
+=== RUN   FuzzImport/seed#5
+=== RUN   FuzzImport/seed#6
+=== RUN   FuzzImport/seed#7
+=== RUN   FuzzImport/seed#8
+=== RUN   FuzzImport/seed#9
+=== RUN   FuzzImport/2e73f011c9c036d8
+--- PASS: FuzzImport (0.03s)
+    --- PASS: FuzzImport/seed#0 (0.00s)
+    --- PASS: FuzzImport/seed#1 (0.00s)
+    --- PASS: FuzzImport/seed#2 (0.00s)
+    --- PASS: FuzzImport/seed#3 (0.00s)
+    --- PASS: FuzzImport/seed#4 (0.00s)
+    --- PASS: FuzzImport/seed#5 (0.01s)
+    --- PASS: FuzzImport/seed#6 (0.00s)
+    --- PASS: FuzzImport/seed#7 (0.00s)
+    --- PASS: FuzzImport/seed#8 (0.00s)
+    --- PASS: FuzzImport/seed#9 (0.00s)
+    --- PASS: FuzzImport/2e73f011c9c036d8 (0.00s)
 PASS
-ok  	github.com/softdevstudio/ebyte	6.013s
-fuzz: elapsed: 0s, gathering baseline coverage: 0/46 completed
-fuzz: elapsed: 0s, gathering baseline coverage: 46/46 completed, now fuzzing with 2 workers
-fuzz: elapsed: 3s, execs: 40745 (13577/sec), new interesting: 5 (total: 51)
-fuzz: elapsed: 6s, execs: 40745 (0/sec), new interesting: 5 (total: 51)
-fuzz: elapsed: 6s, execs: 40745 (0/sec), new interesting: 5 (total: 51)
+ok  	github.com/softdevstudio/ebyte/kaitai	1.406s
+fuzz: elapsed: 0s, gathering baseline coverage: 0/1 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 1/1 completed, now fuzzing with 2 workers
+fuzz: elapsed: 3s, execs: 44635 (14877/sec), new interesting: 31 (total: 32)
+fuzz: elapsed: 5s, execs: 72217 (13187/sec), new interesting: 40 (total: 41)
 PASS
-ok  	github.com/softdevstudio/ebyte	6.013s
-fuzz: elapsed: 0s, gathering baseline coverage: 0/116 completed
-fuzz: elapsed: 0s, gathering baseline coverage: 116/116 completed, now fuzzing with 2 workers
-fuzz: elapsed: 3s, execs: 15529 (5175/sec), new interesting: 11 (total: 127)
-fuzz: elapsed: 6s, execs: 15529 (0/sec), new interesting: 11 (total: 127)
-fuzz: elapsed: 6s, execs: 15529 (0/sec), new interesting: 11 (total: 127)
+ok  	github.com/softdevstudio/ebyte	5.099s
+fuzz: elapsed: 0s, gathering baseline coverage: 0/1 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 1/1 completed, now fuzzing with 2 workers
+fuzz: elapsed: 3s, execs: 45388 (15125/sec), new interesting: 4 (total: 5)
+fuzz: elapsed: 6s, execs: 45388 (0/sec), new interesting: 4 (total: 5)
+fuzz: elapsed: 6s, execs: 45388 (0/sec), new interesting: 4 (total: 5)
 PASS
-ok  	github.com/softdevstudio/ebyte	6.013s
-fuzz: elapsed: 0s, gathering baseline coverage: 0/116 completed
-fuzz: elapsed: 0s, gathering baseline coverage: 116/116 completed, now fuzzing with 2 workers
-fuzz: elapsed: 3s, execs: 17133 (5708/sec), new interesting: 17 (total: 133)
-fuzz: elapsed: 6s, execs: 17133 (0/sec), new interesting: 17 (total: 133)
-fuzz: elapsed: 6s, execs: 17133 (0/sec), new interesting: 17 (total: 133)
+ok  	github.com/softdevstudio/ebyte	6.022s
+fuzz: elapsed: 0s, gathering baseline coverage: 0/1 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 1/1 completed, now fuzzing with 2 workers
+fuzz: elapsed: 3s, execs: 54362 (18120/sec), new interesting: 48 (total: 49)
+fuzz: elapsed: 6s, execs: 90014 (11881/sec), new interesting: 50 (total: 51)
+fuzz: elapsed: 6s, execs: 90014 (0/sec), new interesting: 50 (total: 51)
 PASS
 ok  	github.com/softdevstudio/ebyte	6.018s
-fuzz: elapsed: 0s, gathering baseline coverage: 0/18 completed
-fuzz: elapsed: 0s, gathering baseline coverage: 18/18 completed, now fuzzing with 2 workers
-fuzz: elapsed: 3s, execs: 107052 (35677/sec), new interesting: 1 (total: 19)
-fuzz: elapsed: 5s, execs: 186333 (38453/sec), new interesting: 1 (total: 19)
+fuzz: elapsed: 0s, gathering baseline coverage: 0/6 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 6/6 completed, now fuzzing with 2 workers
+fuzz: elapsed: 3s, execs: 11996 (3998/sec), new interesting: 85 (total: 91)
+fuzz: elapsed: 6s, execs: 11996 (0/sec), new interesting: 85 (total: 91)
+fuzz: elapsed: 6s, execs: 11996 (0/sec), new interesting: 85 (total: 91)
 PASS
-ok  	github.com/softdevstudio/ebyte/cmd/ebyte	5.067s
+ok  	github.com/softdevstudio/ebyte	6.021s
+fuzz: elapsed: 0s, gathering baseline coverage: 0/2 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 2/2 completed, now fuzzing with 2 workers
+fuzz: elapsed: 3s, execs: 62741 (20907/sec), new interesting: 94 (total: 96)
+fuzz: elapsed: 6s, execs: 85487 (7584/sec), new interesting: 116 (total: 118)
+fuzz: elapsed: 6s, execs: 85487 (0/sec), new interesting: 116 (total: 118)
+PASS
+ok  	github.com/softdevstudio/ebyte	6.023s
+fuzz: elapsed: 0s, gathering baseline coverage: 0/5 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 5/5 completed, now fuzzing with 2 workers
+fuzz: elapsed: 3s, execs: 36301 (12100/sec), new interesting: 37 (total: 42)
+fuzz: elapsed: 5s, execs: 78441 (18626/sec), new interesting: 43 (total: 48)
+PASS
+ok  	github.com/softdevstudio/ebyte	5.268s
+fuzz: elapsed: 0s, gathering baseline coverage: 0/3 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 3/3 completed, now fuzzing with 2 workers
+fuzz: elapsed: 3s, execs: 8997 (2999/sec), new interesting: 20 (total: 23)
+fuzz: elapsed: 6s, execs: 36908 (9304/sec), new interesting: 25 (total: 28)
+fuzz: elapsed: 6s, execs: 36908 (0/sec), new interesting: 25 (total: 28)
+PASS
+ok  	github.com/softdevstudio/ebyte	6.014s
+fuzz: elapsed: 0s, gathering baseline coverage: 0/2 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 2/2 completed, now fuzzing with 2 workers
+fuzz: elapsed: 3s, execs: 17310 (5769/sec), new interesting: 69 (total: 71)
+fuzz: elapsed: 6s, execs: 21445 (1378/sec), new interesting: 79 (total: 81)
+fuzz: elapsed: 6s, execs: 21445 (0/sec), new interesting: 79 (total: 81)
+PASS
+ok  	github.com/softdevstudio/ebyte	6.015s
+fuzz: elapsed: 0s, gathering baseline coverage: 0/2 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 2/2 completed, now fuzzing with 2 workers
+fuzz: elapsed: 3s, execs: 42434 (14144/sec), new interesting: 36 (total: 38)
+fuzz: elapsed: 6s, execs: 42434 (0/sec), new interesting: 36 (total: 38)
+fuzz: elapsed: 6s, execs: 42434 (0/sec), new interesting: 36 (total: 38)
+PASS
+ok  	github.com/softdevstudio/ebyte	6.016s
+fuzz: elapsed: 0s, gathering baseline coverage: 0/2 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 2/2 completed, now fuzzing with 2 workers
+fuzz: elapsed: 3s, execs: 40995 (13661/sec), new interesting: 30 (total: 32)
+fuzz: elapsed: 5s, execs: 70028 (14190/sec), new interesting: 31 (total: 33)
+PASS
+ok  	github.com/softdevstudio/ebyte	5.054s
+fuzz: elapsed: 0s, gathering baseline coverage: 0/3 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 3/3 completed, now fuzzing with 2 workers
+fuzz: elapsed: 3s, execs: 13818 (4605/sec), new interesting: 40 (total: 43)
+fuzz: elapsed: 6s, execs: 13818 (0/sec), new interesting: 40 (total: 43)
+fuzz: elapsed: 6s, execs: 13818 (0/sec), new interesting: 40 (total: 43)
+PASS
+ok  	github.com/softdevstudio/ebyte	6.024s
+fuzz: elapsed: 0s, gathering baseline coverage: 0/11 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 11/11 completed, now fuzzing with 2 workers
+fuzz: elapsed: 3s, execs: 62467 (20820/sec), new interesting: 4 (total: 15)
+fuzz: elapsed: 6s, execs: 62467 (0/sec), new interesting: 4 (total: 15)
+fuzz: elapsed: 6s, execs: 62467 (0/sec), new interesting: 4 (total: 15)
+PASS
+ok  	github.com/softdevstudio/ebyte/kaitai	6.026s
+fuzz: elapsed: 0s, gathering baseline coverage: 0/3 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 3/3 completed, now fuzzing with 2 workers
+fuzz: elapsed: 3s, execs: 75092 (25022/sec), new interesting: 11 (total: 14)
+fuzz: elapsed: 5s, execs: 127637 (25315/sec), new interesting: 12 (total: 15)
+PASS
+ok  	github.com/softdevstudio/ebyte/cmd/ebyte	5.084s
 PASS: compiled CLI stdin round trip, failed traces, limit exits, collision protection and argument privacy
-PASS: broken stdout pipes exit 1 with diagnostics; SIGINT exits 3 while stdin remains open
+PASS: broken stdout pipes exit 1 with diagnostics; SIGINT and SIGTERM exit 3 while stdin remains open
 PASS: built-CLI demo, 21-byte exact round trip; added record gives 25 bytes, count 3, note offset 23
 PASS: 10 isolated resource cases, exact 16 MiB payload round trip, escape expansion and bounded rejection
-PASS: formatting, vet, race, independent fixture/decoder oracles, six bounded fuzz targets, build and operational CLI smoke and saved round-trip demo and resource observations
+{"wasm_smoke":"passed","version":"0.7.0","build":{"go_version":"go1.27.3","GOARCH":"wasm","GOOS":"js","vcs.revision":"373375d64912efbeec1132b7379cde1198142686","vcs.modified":"true"}}
+PASS: formatting, vet, race, independent fixture/decoder oracles, eleven bounded fuzz targets, build and operational CLI smoke, WebAssembly smoke and saved round-trip demo and resource observations
