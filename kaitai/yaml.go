@@ -222,7 +222,7 @@ func (r *reader) mapping(indent int) (*node, error) {
 			return nil, &yamlError{l.number, "expected a key"}
 		}
 		if seen[key] {
-			return nil, &yamlError{l.number, "duplicate key " + strconv.Quote(key)}
+			return nil, &yamlError{l.number, "duplicate key"}
 		}
 		seen[key] = true
 		r.pos++
@@ -259,16 +259,18 @@ func (r *reader) value(rest string, number, indent int) (*node, error) {
 	case rest[0] == '[' || rest[0] == '{':
 		// A flow collection may continue on deeper lines until it closes.
 		var b strings.Builder
+		var scan flowScan
 		b.WriteString(rest)
-		for !balanced(rest) {
+		scan.feed(rest)
+		for !scan.balanced() {
 			if r.pos >= len(r.lines) || (r.lines[r.pos].indent <= indent && strings.TrimSpace(r.lines[r.pos].text) != "") {
 				return nil, &yamlError{number, "unclosed flow collection"}
 			}
 			more := stripComment(strings.TrimSpace(r.lines[r.pos].text))
 			b.WriteString(" ")
 			b.WriteString(more)
+			scan.feed(" " + more)
 			r.pos++
-			rest = b.String()
 		}
 		text := b.String()
 		f := &flow{s: text, line: number}
@@ -291,7 +293,14 @@ func (r *reader) value(rest string, number, indent int) (*node, error) {
 func (r *reader) scalarLines(first string, number, indent int) (*node, error) {
 	var b strings.Builder
 	b.WriteString(first)
-	quotedOpen := open(first)
+	// A plain scalar may run on; a quoted one runs on until it closes.
+	quoted := first != "" && (first[0] == '"' || first[0] == '\'')
+	var q quoteScan
+	if quoted {
+		q.q = first[0]
+		q.feed(first[1:])
+	}
+	afterBreak := false
 	for r.pos < len(r.lines) {
 		l := r.lines[r.pos]
 		t := stripComment(l.text)
@@ -301,8 +310,9 @@ func (r *reader) scalarLines(first string, number, indent int) (*node, error) {
 			for j < len(r.lines) && strings.TrimSpace(stripComment(r.lines[j].text)) == "" {
 				j++
 			}
-			if j < len(r.lines) && r.lines[j].indent > indent && !looksStructural(r.lines[j], indent) && quotedOpen {
+			if j < len(r.lines) && r.lines[j].indent > indent && !looksStructural(r.lines[j], indent) && (!quoted || q.open()) {
 				b.WriteString("\n")
+				afterBreak = true
 				r.pos = j
 				continue
 			}
@@ -311,12 +321,19 @@ func (r *reader) scalarLines(first string, number, indent int) (*node, error) {
 		if l.indent <= indent || looksStructural(l, indent) {
 			break
 		}
-		b.WriteString(" ")
-		b.WriteString(strings.TrimSpace(t))
-		r.pos++
-		if first != "" && (first[0] == '"' || first[0] == '\'') {
-			quotedOpen = open(b.String())
+		next := strings.TrimSpace(t)
+		if !afterBreak {
+			b.WriteString(" ")
+			if quoted {
+				q.feed(" ")
+			}
 		}
+		afterBreak = false
+		b.WriteString(next)
+		if quoted {
+			q.feed(next)
+		}
+		r.pos++
 	}
 	return scalar(b.String(), number)
 }
@@ -327,15 +344,6 @@ func looksStructural(l line, indent int) bool {
 	t := stripComment(l.text)
 	_, _, ok := splitKey(t)
 	return ok || t == "-" || strings.HasPrefix(t, "- ")
-}
-
-// open reports whether text is a quoted scalar that has not closed yet.
-func open(text string) bool {
-	if text == "" || (text[0] != '"' && text[0] != '\'') {
-		return true
-	}
-	_, n, e := quotedScalar(text, 0)
-	return e != nil || n < 0
 }
 
 func (r *reader) blockScalar(header string, number, indent int) (*node, error) {
@@ -473,29 +481,76 @@ func refused(rest string, number int) error {
 	return nil
 }
 
-func balanced(s string) bool {
-	depth := 0
-	var quote byte
+// flowScan tracks bracket depth and quoting across the lines of a flow
+// collection, so each line is scanned once.
+type flowScan struct {
+	depth int
+	quote byte
+	esc   bool
+}
+
+func (f *flowScan) feed(s string) {
 	for i := 0; i < len(s); i++ {
 		c := s[i]
 		switch {
-		case quote == '\'' && c == '\'':
-			quote = 0
-		case quote == '"' && c == '\\':
-			i++
-		case quote == '"' && c == '"':
-			quote = 0
-		case quote != 0:
+		case f.esc:
+			f.esc = false
+		case f.quote == '\'' && c == '\'':
+			f.quote = 0
+		case f.quote == '"' && c == '\\':
+			f.esc = true
+		case f.quote == '"' && c == '"':
+			f.quote = 0
+		case f.quote != 0:
 		case c == '\'' || c == '"':
-			quote = c
+			f.quote = c
 		case c == '[' || c == '{':
-			depth++
+			f.depth++
 		case c == ']' || c == '}':
-			depth--
+			f.depth--
 		}
 	}
-	return depth <= 0 && quote == 0
 }
+
+func (f *flowScan) balanced() bool { return f.depth <= 0 && f.quote == 0 }
+
+func balanced(s string) bool {
+	var f flowScan
+	f.feed(s)
+	return f.balanced()
+}
+
+// quoteScan tracks whether a quoted scalar spread over lines has closed.
+type quoteScan struct {
+	q                  byte
+	closed, esc, quote bool // quote: a ' that may be the first of ''
+}
+
+func (q *quoteScan) feed(s string) {
+	for i := 0; i < len(s) && !q.closed; i++ {
+		c := s[i]
+		if q.quote {
+			q.quote = false
+			if c == '\'' {
+				continue
+			}
+			q.closed = true
+			return
+		}
+		switch {
+		case q.q == '"' && q.esc:
+			q.esc = false
+		case q.q == '"' && c == '\\':
+			q.esc = true
+		case q.q == '"' && c == '"':
+			q.closed = true
+		case q.q == '\'' && c == '\'':
+			q.quote = true
+		}
+	}
+}
+
+func (q *quoteScan) open() bool { return !q.closed && !q.quote }
 
 // scalar turns the text of a block-context scalar into a node.
 func scalar(text string, number int) (*node, error) {

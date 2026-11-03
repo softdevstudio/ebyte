@@ -474,7 +474,12 @@ func (e *encoder) elements(fields []field, m map[string]any, path string) error 
 		p := path + "/" + f.name
 		refs := e.refs[p]
 		delete(e.refs, p)
-		a, _ := m[f.name].([]any)
+		v, present := m[f.name]
+		if !present {
+			// A conditional container that is absent records no offsets.
+			continue
+		}
+		a, _ := v.([]any)
 		for _, l := range f.links {
 			target := fields[l.target]
 			starts := e.elementStarts[path+"/"+target.name]

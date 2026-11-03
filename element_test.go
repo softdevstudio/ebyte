@@ -198,3 +198,27 @@ func FuzzElementOffsets(f *testing.F) {
 		}
 	})
 }
+
+// A conditional container of offsets may be absent while its targets are
+// present; when present, its counts must match.
+func TestElementOffsetsOptionalIndex(t *testing.T) {
+	p := repeatPlan(t, `{"schema_version":1,"name":"w","endian":"little","fields":[
+{"name":"n","type":"u8"},
+{"name":"has","type":"u8"},
+{"name":"recs","type":"array","count":{"field":"n"},"fields":[{"name":"b","type":"bytes","length":1}]},
+{"name":"idx","type":"array","count":{"field":"n"},"when":{"field":"has","equals":"1"},"fields":[
+ {"name":"at","type":"u8","derive":{"offset_of":{"element_of":"recs"}}}]}]}`, DefaultLimits())
+	for _, input := range []string{"02 00 aabb", "02 01 aabb 0203"} {
+		doc, _, e := p.Decode(context.Background(), bytes.NewReader(unhex(t, input)))
+		if e != nil {
+			t.Fatalf("%s: %v", input, e)
+		}
+		var out bytes.Buffer
+		if e := p.Encode(context.Background(), doc, &out); e != nil || hex.EncodeToString(out.Bytes()) != strings.ReplaceAll(input, " ", "") {
+			t.Fatalf("%s: round trip %v %x", input, e, out.Bytes())
+		}
+	}
+	if _, _, e := p.Decode(context.Background(), bytes.NewReader(unhex(t, "02 01 aabb 0303"))); at(diagnosticOf(t, e)) != "constraint_mismatch /idx/0/at 4 4" {
+		t.Fatalf("stale offset in present index: %v", e)
+	}
+}

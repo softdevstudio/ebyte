@@ -297,7 +297,12 @@ func (d *decoder) elements(fields []field, path string, starts []int64, values m
 		p := path + "/" + f.name
 		refs := d.refs[p]
 		delete(d.refs, p)
-		a, _ := values[f.name].([]any)
+		v, present := values[f.name]
+		if !present {
+			// A conditional container that is absent records no offsets.
+			continue
+		}
+		a, _ := v.([]any)
 		for _, l := range f.links {
 			tp := path + "/" + fields[l.target].name
 			targets := d.elementStarts[tp]

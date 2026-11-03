@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/softdevstudio/ebyte"
 )
@@ -299,7 +300,7 @@ func TestImportRefusals(t *testing.T) {
 		{"encoding", "  - {id: s, type: str, size: 2, encoding: SJIS}\n", "/seq/0/encoding", "ASCII and UTF-8"},
 		{"if expression", "  - {id: a, type: u1}\n  - {id: b, type: u1, if: a > 1}\n", "/seq/1/if", "if"},
 		{"valid range", "  - id: a\n    type: u1\n    valid: {min: 1}\n", "/seq/0/valid", "valid eq"},
-		{"params type", "  - {id: a, type: thing(1)}\n", "/seq/0/type", "parameters"},
+		{"params type", "  - {id: a, type: thing(1)}\n", "/seq/0/type", "parameterized"},
 		{"unknown type", "  - {id: a, type: nothing}\n", "/seq/0/type", "unknown type"},
 		{"no id", "  - {type: u1}\n", "/seq/0/id", "id"},
 	} {
@@ -395,4 +396,90 @@ func FuzzImport(f *testing.F) {
 			t.Fatal(e)
 		}
 	})
+}
+
+// Type and enum names resolve where a type is defined, not where it is used,
+// as Kaitai resolves them. Both cases were wrong imports found in review.
+func TestImportResolvesNamesAtDefinition(t *testing.T) {
+	decodeOne := func(src string, input []byte) map[string]any {
+		t.Helper()
+		r, e := Import([]byte(src))
+		if e != nil {
+			t.Fatal(e)
+		}
+		p, e := ebyte.Compile(r.Schema, ebyte.DefaultLimits())
+		if e != nil {
+			t.Fatal(e)
+		}
+		doc, _, e := p.Decode(context.Background(), bytes.NewReader(input))
+		if e != nil {
+			t.Fatal(e)
+		}
+		return doc.Values
+	}
+	// baz is used inside foo, but defined at the top, so its bar is the top-level bar.
+	v := decodeOne(`meta: {id: scope, endian: le}
+seq: [{id: f, type: foo}]
+types:
+  foo:
+    seq: [{id: z, type: baz}]
+    types:
+      bar:
+        seq: [{id: wide, type: u2}]
+  baz:
+    seq: [{id: q, type: bar}]
+  bar:
+    seq: [{id: narrow, type: u1}]
+`, []byte{1})
+	got, _ := json.Marshal(v)
+	if string(got) != `{"f":[{"z":[{"q":[{"narrow":"1"}]}]}]}` {
+		t.Fatalf("scope: %s", got)
+	}
+	// A type's own enum shadows a top-level enum of the same name.
+	v = decodeOne(`meta: {id: en, endian: le}
+seq: [{id: t, type: inner}]
+types:
+  inner:
+    seq:
+      - {id: k, type: u1, enum: kind}
+      - {id: extra, type: u1, if: k == kind::special}
+    enums:
+      kind: {1: special, 2: other}
+enums:
+  kind: {2: special, 1: other}
+`, []byte{1, 7})
+	if got, _ := json.Marshal(v); string(got) != `{"t":[{"extra":"7","k":"1"}]}` {
+		t.Fatalf("enum: %s", got)
+	}
+}
+
+// Unclosed flow collections and quoted scalars spread over a whole 1 MiB file
+// are read in one pass; review measured over three minutes before the fix.
+func TestYAMLLongRunsAreLinear(t *testing.T) {
+	for _, src := range []string{
+		"seq: [\n" + strings.Repeat("  x,\n", 250000),
+		"doc: \"" + strings.Repeat("  word\n", 140000),
+	} {
+		start := time.Now()
+		if _, e := Import([]byte(src)); e == nil {
+			t.Fatal("accepted")
+		}
+		if d := time.Since(start); d > 5*time.Second {
+			t.Fatalf("took %v", d)
+		}
+	}
+}
+
+// Refusal reasons never quote values from the file.
+func TestRefusalsDoNotEchoContent(t *testing.T) {
+	reasons := refusal(t, "meta: {id: r, endian: le}\nseq:\n  - {id: a, type: u1}\n  - {id: b, size: hunter2 + 1}\n  - {id: c, type: secret_type}\n  - {id: d, size: 1, hunter3: x}\n")
+	for _, r := range reasons {
+		if strings.Contains(r.Reason, "hunter") || strings.Contains(r.Reason, "secret") {
+			t.Fatalf("echoed: %v", r)
+		}
+	}
+	_, e := parseYAML([]byte("hunter2: 1\nhunter2: 2\n"))
+	if e == nil || strings.Contains(e.Error(), "hunter") {
+		t.Fatalf("duplicate key: %v", e)
+	}
 }

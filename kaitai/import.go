@@ -140,7 +140,6 @@ type importer struct {
 	endian   string // "little", "big" or "" when meta has none
 	encoding string // meta encoding, normalised, or ""
 	needsEnd bool   // a field needed the default endian
-	enums    *node  // top-level enums, for enum::member in if and valid
 	count    int    // fields produced so far, user types inlined
 }
 
@@ -154,20 +153,23 @@ func (im *importer) refuse(path, format string, args ...any) {
 	}
 }
 
-// scope is a type namespace: a type's own nested types, then its parent's.
+// scope is a type namespace: a type's own nested types and enums, then those
+// of the scope the type is defined in. Names resolve where a type is defined,
+// not where it is used, as in Kaitai.
 type scope struct {
-	types  *node
-	path   string
-	parent *scope
+	types, enums *node
+	path         string
+	parent       *scope
 }
 
-func (s *scope) lookup(name string) (*node, string) {
+// lookup finds a type and the scope that defines it.
+func (s *scope) lookup(name string) (*node, string, *scope) {
 	for ; s != nil; s = s.parent {
 		if t := s.types.get(name); t != nil {
-			return t, s.path + "/" + name
+			return t, s.path + "/" + name, s
 		}
 	}
-	return nil, ""
+	return nil, "", nil
 }
 
 var (
@@ -234,8 +236,7 @@ func (im *importer) run(root *node) *object {
 	if root.get("doc") != nil || root.get("doc-ref") != nil {
 		im.notes["doc dropped"] = true
 	}
-	im.enums = root.get("enums")
-	top := &scope{types: root.get("types"), path: "/types"}
+	top := &scope{types: root.get("types"), enums: root.get("enums"), path: "/types"}
 	fields := im.fields(root, "", top, 0, map[string]bool{}, true)
 	im.instances(root.get("instances"), "/instances")
 	if root.get("seq") == nil {
@@ -404,7 +405,7 @@ func (im *importer) attribute(a *node, p string, prior []*object, sc *scope, dep
 			case "repeat-until":
 				im.refuse(p+"/repeat-until", "repeat until is not supported")
 			default:
-				im.refuse(p+"/"+k, "attribute %s is not supported", k)
+				im.refuse(p+"/"+k, "attribute is not supported")
 			}
 		}
 	}
@@ -444,7 +445,7 @@ func (im *importer) attribute(a *node, p string, prior []*object, sc *scope, dep
 		}
 		n, ok := literal(lit)
 		if !ok && lit.kind == 'v' && !lit.quoted {
-			n, ok = im.enumValue(lit.text)
+			n, ok = sc.enumValue(lit.text)
 		}
 		kind, _ := elem.get("type").(string)
 		if !ok || !(strings.HasPrefix(kind, "u") || strings.HasPrefix(kind, "i") || kind == "bits") || a.get("repeat") != nil {
@@ -487,7 +488,7 @@ func (im *importer) attribute(a *node, p string, prior []*object, sc *scope, dep
 			}
 			f = (&object{}).set("name", id).set("type", "repeat").set("until", "end_of_input").set("fields", children)
 		default:
-			im.refuse(p+"/repeat", "repeat %s is not supported", repeat.text)
+			im.refuse(p+"/repeat", "this kind of repeat is not supported")
 			return nil
 		}
 	}
@@ -503,7 +504,7 @@ func (im *importer) attribute(a *node, p string, prior []*object, sc *scope, dep
 		if m != nil {
 			n, ok = literal(&node{kind: 'v', text: m[2]})
 			if !ok {
-				n, ok = im.enumValue(m[2])
+				n, ok = sc.enumValue(m[2])
 			}
 		}
 		if c.kind != 'v' || c.quoted || m == nil || !ok || ref == nil || !isInteger(ref) {
@@ -624,12 +625,12 @@ func (im *importer) element(a *node, p, id string, prior []*object, sc *scope, d
 		return f, nil
 	}
 	if strings.ContainsAny(name, "(:.") {
-		im.refuse(p+"/type", "type %s: parameters, enums and paths are not supported", name)
+		im.refuse(p+"/type", "parameterized types, enum types and type paths are not supported")
 		return f, nil
 	}
-	t, tp := sc.lookup(name)
+	t, tp, defined := sc.lookup(name)
 	if t == nil {
-		im.refuse(p+"/type", "unknown type %s", name)
+		im.refuse(p+"/type", "unknown type")
 		return f, nil
 	}
 	if stack[tp] {
@@ -638,7 +639,7 @@ func (im *importer) element(a *node, p, id string, prior []*object, sc *scope, d
 	}
 	stack[tp] = true
 	defer delete(stack, tp)
-	inner := &scope{types: t.get("types"), path: tp + "/types", parent: sc}
+	inner := &scope{types: t.get("types"), enums: t.get("enums"), path: tp + "/types", parent: defined}
 	children := im.fields(t, tp, inner, depth+1, stack, false)
 	if children == nil {
 		children = []any{}
@@ -698,15 +699,21 @@ func (im *importer) dimension(n *node, p string, prior []*object) (any, bool) {
 			}
 		}
 	}
-	im.refuse(p, "expression %q is not supported (only a number or an earlier integer field)", n.text)
+	im.refuse(p, "expression is not supported (only a number or an earlier integer field)")
 	return nil, false
 }
 
-// enumValue resolves enum::member against the top-level enums.
-func (im *importer) enumValue(s string) (string, bool) {
+// enumValue resolves enum::member from the current type outward.
+func (sc *scope) enumValue(s string) (string, bool) {
 	name, member, found := strings.Cut(s, "::")
-	e := im.enums.get(name)
-	if !found || e == nil || e.kind != 'm' || strings.Contains(member, "::") {
+	if !found || strings.Contains(member, "::") {
+		return "", false
+	}
+	var e *node
+	for x := sc; x != nil && e == nil; x = x.parent {
+		e = x.enums.get(name)
+	}
+	if e == nil || e.kind != 'm' {
 		return "", false
 	}
 	for i, k := range e.keys {
@@ -764,7 +771,8 @@ func literal(n *node) (string, bool) {
 // contentBytes reads contents: a string, or a list of byte numbers and strings.
 func contentBytes(n *node) ([]byte, bool) {
 	if n.kind == 'v' {
-		if n.text == "" {
+		// Kaitai refuses a bare number here; text must be a word or quoted.
+		if _, number := literal(n); n.text == "" || number {
 			return nil, false
 		}
 		return []byte(n.text), true
@@ -779,10 +787,10 @@ func contentBytes(n *node) ([]byte, bool) {
 		}
 		if s, ok := literal(it); ok {
 			v, e := strconv.Atoi(s)
-			if e != nil || v < 0 || v > 255 {
+			if e != nil || v < -128 || v > 255 {
 				return nil, false
 			}
-			b = append(b, byte(v))
+			b = append(b, byte(v)) // -1 is 0xff, as in Kaitai
 			continue
 		}
 		b = append(b, it.text...)
