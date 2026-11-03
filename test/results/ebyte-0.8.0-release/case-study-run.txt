@@ -1,0 +1,30 @@
+ebyte 0.8.0
+== import stl.ksy
+{"notes":["doc dropped","meta application dropped","meta file-extension dropped","meta license dropped","meta xref dropped","user types become arrays of one element"]}
+exit 0
+== make a cube with numpy-stl
+cube.stl 684 bytes, volume 1.0
+decode exit 0
+unchanged re-encode identical
+triangles in document: 12 num_triangles present: False
+first triangle: {"abr": "0", "normal": [{"x": "0", "y": "0", "z": "-1"}], "vertices": [{"x": "0", "y": "0", "z": "0"}, {"x": "0", "y": "1", "z": "0"}, {"x": "1", "y": "0", "z": "0"}]}
+encode exit 0
+edited.stl 584 bytes, 10 triangles, x range 0.0 2.0
+== refusals
+image/gif.ksy exit 2
+3 reasons; first: {'path': '/types/color_table/seq/0/repeat', 'reason': 'repeat eos is supported only as the last top-level field'}
+archive/zip.ksy exit 2
+3 reasons; first: {'path': '/meta/imports', 'reason': 'imports are not supported'}
+media/wav.ksy exit 2
+4 reasons; first: {'path': '/meta/imports', 'reason': 'imports are not supported'}
+== zip offsets
+decode exit 0
+encode exit 0
+Archive:  site-edit.zip
+    testing: index-2026.html          OK
+    testing: style.css                OK
+    testing: notes.txt                OK
+No errors detected in compressed data of site-edit.zip.
+site.zip [('index.html', 0), ('style.css', 52), ('notes.txt', 108)]
+site-edit.zip [('index-2026.html', 0), ('style.css', 57), ('notes.txt', 113)]
+b'final version, approved\n'

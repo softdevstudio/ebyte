@@ -1,0 +1,61 @@
+{
+ "source_sha": "bb3765f93234c3b9ed14a628a45c5a348a606174",
+ "runs": [
+  {
+   "id": 41620920144,
+   "name": "Release",
+   "url": "https://github.com/softdevstudio/ebyte/actions/runs/41620920144",
+   "conclusion": "success",
+   "jobs": [
+    {
+     "id": 125866105263,
+     "name": "plan",
+     "conclusion": "success"
+    },
+    {
+     "id": 125866193909,
+     "name": "package (ubuntu-latest, linux)",
+     "conclusion": "success"
+    },
+    {
+     "id": 125866193966,
+     "name": "package (windows-latest, windows)",
+     "conclusion": "success"
+    },
+    {
+     "id": 125866194077,
+     "name": "package (macos-latest, darwin)",
+     "conclusion": "success"
+    },
+    {
+     "id": 125866818021,
+     "name": "publish",
+     "conclusion": "success"
+    }
+   ]
+  },
+  {
+   "id": 41620518259,
+   "name": "CI",
+   "url": "https://github.com/softdevstudio/ebyte/actions/runs/41620518259",
+   "conclusion": "success",
+   "jobs": [
+    {
+     "id": 125864738369,
+     "name": "windows",
+     "conclusion": "success"
+    },
+    {
+     "id": 125864738520,
+     "name": "test (ubuntu-latest)",
+     "conclusion": "success"
+    },
+    {
+     "id": 125864738720,
+     "name": "test (macos-latest)",
+     "conclusion": "success"
+    }
+   ]
+  }
+ ]
+}

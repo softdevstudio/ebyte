@@ -1,0 +1,134 @@
+{
+  "version": "0.8.0",
+  "source_sha": "bb3765f93234c3b9ed14a628a45c5a348a606174",
+  "endpoints": {
+    "tags/v0.8.0": {
+      "release_id": 432561174,
+      "tag": "v0.8.0",
+      "name": "EByte v0.8.0",
+      "draft": false,
+      "prerelease": false,
+      "assets": [
+        {
+          "name": "RELEASE-MANIFEST.json",
+          "bytes": 31506,
+          "sha256": "bb821a0af66721bd57fc725ede5a13618295759c226be3af8aab8d6390319a04",
+          "matches_sha256sums": true
+        },
+        {
+          "name": "SHA256SUMS",
+          "bytes": 625,
+          "sha256": "eee78afb4d7b957233367ef1a60d29ed5d6d89b2e34b51f73448fe43b0912123",
+          "matches_sha256sums": null
+        },
+        {
+          "name": "ebyte-darwin-amd64.tar.gz",
+          "bytes": 1626178,
+          "sha256": "8780a78df31b7f26e47be1db4ceb603075d6b0c316e3c5f9d43390067ec4ab69",
+          "matches_sha256sums": true
+        },
+        {
+          "name": "ebyte-darwin-arm64.tar.gz",
+          "bytes": 1493063,
+          "sha256": "2a2cd80b478b9c97b7361b96f1b0cd44e2079e97b1ab66989e72e2ba3172d416",
+          "matches_sha256sums": true
+        },
+        {
+          "name": "ebyte-linux-amd64.tar.gz",
+          "bytes": 1604503,
+          "sha256": "cb9658b589f6c360b21eec36bf078729146571045d83ea6f376c5925ac02490b",
+          "matches_sha256sums": true
+        },
+        {
+          "name": "ebyte-linux-arm64.tar.gz",
+          "bytes": 1446259,
+          "sha256": "36fdc69dba1de07f11f3dcc53961ea47f265525b9262be2eb4a2c75997c7c25e",
+          "matches_sha256sums": true
+        },
+        {
+          "name": "ebyte-wasm.zip",
+          "bytes": 1613008,
+          "sha256": "ba1a67931ac09546c831d59963c24c70f334c2f0c4912cae2b981f6e0c147446",
+          "matches_sha256sums": true
+        },
+        {
+          "name": "ebyte-windows-amd64.zip",
+          "bytes": 1699903,
+          "sha256": "92512b8ea366ba65908f2d9019cecf4b8fdfbd0d562e4203d78f6e89a89ac950",
+          "matches_sha256sums": true
+        }
+      ]
+    },
+    "latest": {
+      "release_id": 432561174,
+      "tag": "v0.8.0",
+      "name": "EByte v0.8.0",
+      "draft": false,
+      "prerelease": false,
+      "assets": [
+        {
+          "name": "RELEASE-MANIFEST.json",
+          "bytes": 31506,
+          "sha256": "bb821a0af66721bd57fc725ede5a13618295759c226be3af8aab8d6390319a04",
+          "matches_sha256sums": true
+        },
+        {
+          "name": "SHA256SUMS",
+          "bytes": 625,
+          "sha256": "eee78afb4d7b957233367ef1a60d29ed5d6d89b2e34b51f73448fe43b0912123",
+          "matches_sha256sums": null
+        },
+        {
+          "name": "ebyte-darwin-amd64.tar.gz",
+          "bytes": 1626178,
+          "sha256": "8780a78df31b7f26e47be1db4ceb603075d6b0c316e3c5f9d43390067ec4ab69",
+          "matches_sha256sums": true
+        },
+        {
+          "name": "ebyte-darwin-arm64.tar.gz",
+          "bytes": 1493063,
+          "sha256": "2a2cd80b478b9c97b7361b96f1b0cd44e2079e97b1ab66989e72e2ba3172d416",
+          "matches_sha256sums": true
+        },
+        {
+          "name": "ebyte-linux-amd64.tar.gz",
+          "bytes": 1604503,
+          "sha256": "cb9658b589f6c360b21eec36bf078729146571045d83ea6f376c5925ac02490b",
+          "matches_sha256sums": true
+        },
+        {
+          "name": "ebyte-linux-arm64.tar.gz",
+          "bytes": 1446259,
+          "sha256": "36fdc69dba1de07f11f3dcc53961ea47f265525b9262be2eb4a2c75997c7c25e",
+          "matches_sha256sums": true
+        },
+        {
+          "name": "ebyte-wasm.zip",
+          "bytes": 1613008,
+          "sha256": "ba1a67931ac09546c831d59963c24c70f334c2f0c4912cae2b981f6e0c147446",
+          "matches_sha256sums": true
+        },
+        {
+          "name": "ebyte-windows-amd64.zip",
+          "bytes": 1699903,
+          "sha256": "92512b8ea366ba65908f2d9019cecf4b8fdfbd0d562e4203d78f6e89a89ac950",
+          "matches_sha256sums": true
+        }
+      ]
+    }
+  },
+  "drafts_in_listing": 0,
+  "downloaded_linux_amd64": {
+    "version_output": "ebyte 0.8.0",
+    "release_smoke": {
+      "native_smoke": "passed",
+      "version": "0.8.0",
+      "platform": "Linux",
+      "architecture": "x86_64",
+      "round_trip_sha256": "6407bb701190903a390ce78b7640d34093164d97a1d9bdb50541f90557e378f9",
+      "file_publication": "enabled"
+    },
+    "kaitai_gallery": "import-ksy over kaitai_struct_formats 7d17566: 9 of 191 files imported",
+    "case_study": "stl.ksy imported; numpy-stl cube decoded, re-encoded identical, edited to 10 triangles and read by numpy-stl; three-entry zip renamed and edited, unzip -t OK, header offsets 0/57/113"
+  }
+}
