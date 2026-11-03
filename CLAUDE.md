@@ -96,7 +96,7 @@ Phase 5, 0.5.0: structural diff of two files through one schema. Case study: fir
 Phase 6, 0.6.0: floats (f32, f64), bit fields within a byte, jumps to a declared offset, and --output to a file on Windows once no-replace publication is verified there.
 Phase 7: a browser demo on ebyte.org: EByte compiled to WebAssembly in an iframe page under content, template untouched.
 
-## EByte 0.8 (softdev-plan item 27, approved by YK 2026-11-03)
+## Done: EByte 0.8 (softdev-plan item 27, approved by YK 2026-11-03)
 
 What and why: the schema library has nine formats, while the Kaitai Struct gallery has 191 .ksy files; importing the subset EByte can express gives users schemas they don't have to write. Multi-entry ZIP still needs a hand edit of each central-directory entry's local_header_offset after a size-changing edit. test/results/latest is still the 0.1.0 recording, and two README lines are out of date.
 
@@ -117,8 +117,8 @@ Steps:
    Review round 1: two blockers, both silent wrong imports: type names resolved where a type was used instead of where it was defined, and enum::member ignored type-local enums; both now resolve through the defining scope (TestImportResolvesNamesAtDefinition, checked against Kaitai). Should-fix, all fixed: quadratic YAML time on long unclosed flows and quoted scalars (1 MiB took 196 s, now about 0.1 s; TestYAMLLongRunsAreLinear); refusal reasons quoted file text (no longer; TestRefusalsDoNotEchoContent); an absent conditional container of element offsets failed the count check (now skipped; TestElementOffsetsOptionalIndex); kaitai.md now covers trailing bytes and negative counts. Nits fixed: bare-number contents, negative byte items, plain-scalar blank lines, the js-yaml claim dated, the Compile-failure path, import-ksy --help, a releases.md note on the record workflow.
    Review round 2: every round 1 finding fixed, no regressions (YAML differential on 191 gallery files and 3000 stress cases; 1 MiB worst cases about 0.1 s). One should-fix, pre-existing: contents list items didn't follow ksc's rules for quoted numbers and 0X; now they do (TestContentsItems, the reviewer's ksc table). Nits fixed: a type name echoed in the recursion reason, runs of blank lines, the YAML 1.1 versus 1.2 note. Left: tab inside a key and `#` inside multi-line quoted doc text (both only affect values that are dropped or refused).
 7. [x] 0.8.0 released by the workflow from bb3765f (results recorded by the Record results workflow, d416db6, go1.27.3). All eight assets match SHA256SUMS at the tag and at latest; no drafts. The downloaded Linux binary passed release_smoke.py, imported 9 of 191 gallery files and ran the case study (STL import and edit read by numpy-stl; a three-entry ZIP renamed and edited, unzip -t OK). Evidence in test/results/ebyte-0.8.0-release.
-8. [ ] ebyte.org case study and pages; softdevstudio.com note; softdev-plan item 27 done.
+8. [x] ebyte.org post "EByte Case Study Importing Kaitai Struct Formats and Editing ZIP Archives" with ebyte-kaitai-import-case-study.svg (rasterized and inspected), About, Quick Start, Schema Library, Schema Reference and Command Reference pages (site f436cb7, Cloudflare Pages succeeded; no local Hugo, front matter checked by script); softdevstudio.com note, listing and plan rows (f9da566); softdev-plan item 27 done with a log row (62b76e5).
 
 ## Next
 
-EByte 0.8 is in progress (above).
+EByte 0.8.0 is released (Kaitai import, per-element offsets) and softdev-plan item 27 is done. Nothing is in progress. The plan's later candidate, declared deflate payloads with byte-exact recompression, is not approved; ask YK first. Kaitai coverage is 9 of 191 gallery files; wider coverage would need switch-on and position reads, which EByte schemas don't have, and is YK's call.
