@@ -96,6 +96,27 @@ Phase 5, 0.5.0: structural diff of two files through one schema. Case study: fir
 Phase 6, 0.6.0: floats (f32, f64), bit fields within a byte, jumps to a declared offset, and --output to a file on Windows once no-replace publication is verified there.
 Phase 7: a browser demo on ebyte.org: EByte compiled to WebAssembly in an iframe page under content, template untouched.
 
+## EByte 0.8 (softdev-plan item 27, approved by YK 2026-11-03)
+
+What and why: the schema library has nine formats, while the Kaitai Struct gallery has 191 .ksy files; importing the subset EByte can express gives users schemas they don't have to write. Multi-entry ZIP still needs a hand edit of each central-directory entry's local_header_offset after a size-changing edit. test/results/latest is still the 0.1.0 recording, and two README lines are out of date.
+
+Design decisions:
+- Phase A, Kaitai import: package `kaitai` (`Import(src []byte) (Result, error)`, Result holding the schema JSON and notes; a refusal lists every reason with its path) and `ebyte import-ksy --input FILE.ksy [--output FILE]`. A hand-written YAML subset reader (block maps and sequences, flow sequences and maps on one line, plain and quoted scalars, | and > blocks, comments); anchors, aliases, tags, multiple documents and complex keys are refused. Mapping: meta id to name, meta endian le/be to endian (required); u1..u8/s1..s8 with le/be suffixes, f4/f8 to f32/f64, bN to bits (bit-endian le refused); str with a literal or field size and ASCII or UTF-8 to string; size without type to bytes; contents to bytes with expect; valid eq on integers to expect; `if: a == N` to when; a user type to an array of count 1 (a single element), with repeat expr to an array with that count, repeat eos to repeat end_of_input (last root field only); a primitive with repeat becomes elements with one `value` field; size plus a user type only when the type's fixed size equals it. A size or count read from an earlier unsigned sibling used once gets a driving derive, so edits keep it right. Dropped with a note: doc, doc-ref, -orig-id, enum (values stay numbers), value instances, meta fields other than id, endian and encoding. Refused with the reason: expressions, switch-on, strz, terminator, pad-right, process, params, imports, size-eos, repeat until, pos instances, encodings other than ASCII/UTF-8, recursive or deeper-than-8 types. The output is checked with ebyte.Compile before it is returned. Kaitai decodes strings loosely; EByte rejects invalid UTF-8, which the docs say.
+- Oracle: kaitai/testdata holds the imported gallery files (with their licenses), generated samples and the values the official Kaitai compiler and JavaScript runtime (0.11.0) read from them (generate.mjs); tests require EByte to read the same values and to encode the samples back to identical bytes. The count of gallery files that import is measured over the whole gallery and recorded, not guessed.
+- Phase B, per-element offsets: a new measured form `{"offset_of": {"element_of": "entries"}}` on an unsigned field inside the elements of an array or repeat C. It names an array or repeat T that is a sibling of C in the parent object; element k's value is the absolute offset of T's element k (plus add). Checked on decode and patched on encode when the parent object completes; C and T must have the same element count (constraint_mismatch otherwise). No length, count or when may use it, and no checksum range in the element may contain it. zip.schema.json derives every local_header_offset.
+- Upkeep: a `record` workflow runs scripts/record-results.sh on Go 1.27.3 and commits test/results/latest; README lists the nine schemas; the README's CI sentence is rewritten so the Linux/macOS and Windows jobs read separately.
+- Version 0.8.0.
+
+Steps:
+1. [ ] Phase 0: this plan.
+2. [ ] Phase B: element_of offsets, schema rules, decode, encode, fixtures, fuzz, zip schema.
+3. [ ] Phase A: YAML subset reader, kaitai package, import-ksy CLI, oracle fixtures, gallery count.
+4. [ ] Upkeep: record workflow, README.
+5. [ ] Docs: schema-v1, cli, kaitai reference, README, schemas/README.
+6. [ ] Independent review (at most two rounds), fixes, fresh results.
+7. [ ] 0.8.0 released by the workflow; assets checked at tag and latest; downloaded binary run.
+8. [ ] ebyte.org case study and pages; softdevstudio.com note; softdev-plan item 27 done.
+
 ## Next
 
-The approved plan after 0.1.1 is complete with phase 7 (0.7.0). YK decides the next step. Re-record test/results/latest with the pinned Go 1.27.3 toolchain when one is available.
+EByte 0.8 is in progress (above).
