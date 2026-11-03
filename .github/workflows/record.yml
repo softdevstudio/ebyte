@@ -1,0 +1,36 @@
+name: Record results
+# Runs scripts/record-results.sh on the pinned Go toolchain and commits
+# test/results/latest, so the recorded results come from a real run rather
+# than a session without that toolchain. Started by hand.
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: record
+  cancel-in-progress: false
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+          cache: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.13'
+      - run: bash scripts/record-results.sh
+      - name: Commit test/results/latest
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A test/results/latest
+          if git diff --cached --quiet; then
+            echo "No change in test/results/latest"
+            exit 0
+          fi
+          git commit -m "Record test results for ${GITHUB_SHA::7}"
+          git pull --rebase origin main
+          git push origin HEAD:main

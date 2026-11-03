@@ -1,6 +1,6 @@
 # EByte command reference
 
-The current release version is 0.7.0, licensed under Apache License 2.0. Build it from the repository with Go pinned by go.mod: go build -o /tmp/ebyte ./cmd/ebyte. Commands share the library interpreter and its strict schema/document contracts. They never guess a binary format. Pass its schema explicitly.
+The current release version is 0.8.0, licensed under Apache License 2.0. Build it from the repository with Go pinned by go.mod: go build -o /tmp/ebyte ./cmd/ebyte. Commands share the library interpreter and its strict schema/document contracts. They never guess a binary format. Pass its schema explicitly.
 
 ## Commands
 
@@ -11,7 +11,10 @@ ebyte encode --schema format.json --input edited.json --output rebuilt.bin
 ebyte inspect --schema format.json --input opaque.bin --format json
 ebyte inspect --schema format.json --input opaque.bin --format text
 ebyte diff --schema format.json --before old.bin --after new.bin --format text
+ebyte import-ksy --input format.ksy --output format.schema.json
 ```
+
+import-ksy (since 0.8.0) takes no --schema: it reads a Kaitai Struct .ksy file (at most 1 MiB, --input - for stdin) and writes the EByte schema to stdout or a new --output file, with notes on dropped parts on stderr as {"notes":[...]}. A file outside the supported subset exits 2 with stdout empty and {"diagnostic_version":1,"stage":"import","code":"unsupported_construct","reasons":[{"path","reason"}...]} on stderr; the reasons name paths in the .ksy file, never file contents. Only --input and --output are accepted. See [kaitai](kaitai.md).
 
 Every command requires --schema FILE; schema stdin is deliberately unsupported so the schema is validated before input is opened. Decode, encode and inspect require --input FILE or --input - for stdin. The optional --output FILE writes to a new destination; omitting it or passing --output - selects stdout. Both --option=value and --option value are accepted. Unknown/duplicate flags, empty values, extra positional arguments and inappropriate options fail with usage exit 2. Format is available only for inspect, with json as its default. Validate-schema rejects --input and emits compact JSON with schema_version, name, schema_sha256 and valid true. --help, help, --version and COMMAND --help do not open inputs.
 

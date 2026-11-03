@@ -1,6 +1,6 @@
 # EByte releases
 
-EByte v0.1.0 was the first implemented release under Apache License 2.0; v0.1.1 is a fix release, v0.2.0 adds repeating blocks, v0.3.0 adds derived sizes and offsets, v0.4.0 adds checksums, v0.5.0 adds structural diff v0.6.0 adds floats, bit fields, forward jumps and Windows file output, and v0.7.0 adds a WebAssembly build. Public release titles use EByte vX.Y.Z and archives have no version in their filenames. Linux amd64/arm64 and macOS amd64/arm64 use tar.gz; Windows amd64 uses zip. Each archive contains the CLI, manual, license/notice files, examples, release.json and GO-NOTICES from the exact building toolchain. Since 0.7.0, ebyte-wasm.zip holds the WebAssembly build with the same licences and notices, and SHA256SUMS and RELEASE-MANIFEST.json cover it too. No external Go modules are linked.
+EByte v0.1.0 was the first implemented release under Apache License 2.0; v0.1.1 is a fix release, v0.2.0 adds repeating blocks, v0.3.0 adds derived sizes and offsets, v0.4.0 adds checksums, v0.5.0 adds structural diff, v0.6.0 adds floats, bit fields, forward jumps and Windows file output, v0.7.0 adds a WebAssembly build, and v0.8.0 adds Kaitai Struct import and per-element offsets. Public release titles use EByte vX.Y.Z and archives have no version in their filenames. Linux amd64/arm64 and macOS amd64/arm64 use tar.gz; Windows amd64 uses zip. Each archive contains the CLI, manual, license/notice files, examples, release.json and GO-NOTICES from the exact building toolchain. Since 0.7.0, ebyte-wasm.zip holds the WebAssembly build with the same licences and notices, and SHA256SUMS and RELEASE-MANIFEST.json cover it too. No external Go modules are linked.
 
 Release waits for successful CI (Linux and macOS, and Windows since 0.6.0) on the same current main-push SHA. Workflow actions are pinned to commit SHAs and Python to 3.13, and post-publication API reads are authenticated when a token is available while asset downloads stay anonymous. Independent review is a session gate recorded in CLAUDE.md. Separate packaging jobs test the library and native CLI on Linux, macOS and Windows. Native binaries are checked again after extraction; the other architectures are explicitly cross-built and unexecuted. release.json and RELEASE-MANIFEST.json record actual host verification rather than implying every archive ran natively. A clean checkout and embedded Go VCS revision bind binaries to the tested source. Build candidates using --local are forbidden in Actions and rejected by the publication validator.
 
@@ -13,6 +13,14 @@ File publication on Linux, macOS and, since 0.6.0, Windows requires same-directo
 ## Changes
 
 Release notes include the section for their own version from this list.
+
+### EByte v0.8.0
+
+- New command import-ksy and package kaitai: a Kaitai Struct .ksy file becomes an EByte schema when it fits the supported subset, otherwise every reason is listed. 9 of the 191 gallery files import; docs/kaitai.md has the mapping and the counts.
+- Imported schemas are tested against the official Kaitai compiler and JavaScript runtime 0.11.0 on the same samples, value for value, and round-trip to identical bytes.
+- New derive form {"offset_of":{"element_of":"list"}}: a field in each element of one list records where the same-index element of another list starts. The ZIP schema now derives every central directory entry's local header offset, so renaming or resizing an entry needs no hand edits of offsets.
+- Two new fuzz targets, for element offsets and for the importer.
+- The Record results workflow records test/results/latest on the pinned toolchain.
 
 ### EByte v0.7.0
 

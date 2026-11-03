@@ -40,6 +40,7 @@ go test -run='^$' -fuzz=FuzzChecksums -fuzztime=5s -parallel=2 -timeout=60s .
 go test -run='^$' -fuzz=FuzzDiff -fuzztime=5s -parallel=2 -timeout=60s .
 go test -run='^$' -fuzz=FuzzFloatsAndBits -fuzztime=5s -parallel=2 -timeout=60s .
 go test -run='^$' -fuzz=FuzzElementOffsets -fuzztime=5s -parallel=2 -timeout=60s .
+go test -run='^$' -fuzz=FuzzImport -fuzztime=5s -parallel=2 -timeout=60s ./kaitai
 go test -run='^$' -fuzz=FuzzCLIArguments -fuzztime=5s -parallel=2 -timeout=60s ./cmd/ebyte
 build_dir="$(mktemp -d)"
 trap 'rm -rf "$build_dir"' EXIT

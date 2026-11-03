@@ -17,10 +17,12 @@ import (
 
 const helpText = `EByte
 Usage: ebyte COMMAND --schema FILE [--input FILE|-] [--output FILE|-]
-Commands: validate-schema, decode, encode, inspect, diff
+Commands: validate-schema, decode, encode, inspect, diff, import-ksy
 inspect, diff: --format json|text (default json)
 --input is required for decode, encode and inspect. --output defaults to stdout (-).
 diff: --before FILE|- --after FILE|- instead of --input; exit 5 when they differ.
+import-ksy --input FILE.ksy|- [--output FILE|-]: no --schema; writes the EByte
+schema for a Kaitai Struct file, or lists every reason it cannot (exit 2).
 Schema files cannot use stdin. Output files must not already exist.
 Limits can only lower defaults: --max-schema-bytes, --max-schema-fields,
 --max-depth, --max-input-bytes, --max-output-bytes, --max-field-bytes,
@@ -126,6 +128,9 @@ func runContext(ctx context.Context, args []string, in io.Reader, out, errOut io
 			return reportContext(ctx, errOut, e)
 		}
 		return 0
+	}
+	if len(args) > 0 && args[0] == "import-ksy" {
+		return runImport(ctx, args[1:], in, out, errOut)
 	}
 	opt, e := parseOptions(args)
 	if e != nil {
@@ -238,11 +243,11 @@ func runContext(ctx context.Context, args []string, in io.Reader, out, errOut io
 	return 0
 }
 func validCommand(s string) bool {
-	return s == "validate-schema" || s == "decode" || s == "encode" || s == "inspect" || s == "diff"
+	return s == "validate-schema" || s == "decode" || s == "encode" || s == "inspect" || s == "diff" || s == "import-ksy"
 }
 func parseOptions(args []string) (options, error) {
 	opt := options{output: "-", format: "json", limits: ebyte.DefaultLimits()}
-	if len(args) == 0 || !validCommand(args[0]) {
+	if len(args) == 0 || !validCommand(args[0]) || args[0] == "import-ksy" {
 		return opt, errUsage
 	}
 	opt.command = args[0]
