@@ -483,3 +483,24 @@ func TestRefusalsDoNotEchoContent(t *testing.T) {
 		t.Fatalf("duplicate key: %v", e)
 	}
 }
+
+// contents list items follow the Kaitai compiler's rules (checked against
+// ksc 0.11.0 in review): quoted decimal or 0x items are one byte.
+func TestContentsItems(t *testing.T) {
+	for item, want := range map[string]string{
+		`"1"`: "01", `"-1"`: "ff", `"10"`: "0a", `"007"`: "07", `"0x31"`: "31", `0X1f`: "30583166",
+		`0o17`: "0f", `0b101`: "05", `1_0`: "0a", `0x1_f`: "1f", `017`: "11", `"ab"`: "6162", `"+1"`: "2b31", `" 1"`: "2031",
+		`-128`: "80", `ab`: "6162",
+	} {
+		r, e := Import([]byte("meta: {id: c, endian: le}\nseq:\n  - id: m\n    contents: [" + item + "]\n"))
+		if e != nil {
+			t.Fatalf("%s: %v", item, e)
+		}
+		if !strings.Contains(string(r.Schema), `"expect": "`+want+`"`) {
+			t.Fatalf("%s: %s, want %s", item, r.Schema, want)
+		}
+	}
+	for _, bad := range []string{"[true]", "[1.5]", "[256]", "[\"300\"]", "1", "[]"} {
+		refusal(t, "meta: {id: c, endian: le}\nseq:\n  - id: m\n    contents: "+bad+"\n")
+	}
+}

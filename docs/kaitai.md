@@ -25,7 +25,7 @@ Measured on 2026-11-03 against the Kaitai Struct gallery (kaitai_struct_formats 
 | `b1`..`b64` (big-endian bit order) | `bits`; the group must fill whole bytes, at most 8 |
 | `str` with `size` and ASCII or UTF-8 | `string` with `length` and `encoding` |
 | `size` without `type` | `bytes` |
-| `contents` (a word, quoted text, or a list of bytes from -128 to 255) | `bytes` with that length and `expect` |
+| `contents`: a word or quoted text as UTF-8, or a list whose unquoted integers and quoted decimal or 0x numbers are bytes (-128 to 255) and whose other items are UTF-8 text, as in the Kaitai compiler | `bytes` with that length and `expect` |
 | `valid: N` or `valid: {eq: N}` on an integer | `expect` |
 | `if: field == N` or `field == enum::member` | `when` on that earlier field |
 | a user type | an `array` of one element, whose fields are the type's |
@@ -46,7 +46,7 @@ Kaitai decodes strings leniently. EByte requires valid UTF-8 in a UTF-8 string a
 
 ## YAML subset
 
-The reader handles what the gallery uses: block mappings and sequences, flow sequences and mappings (also across lines), plain, single- and double-quoted scalars, literal (`|`) and folded (`>`) block scalars with chomping indicators, comments and a leading `---`. It refuses anchors, aliases, tags, complex keys, directives, explicit block indentation, duplicate keys and tabs in indentation. Checked on 2026-11-03 by a comparison script outside the test suite, it read all 191 gallery files to the same structure as js-yaml 4.1.0 with its failsafe schema. It is more lenient than YAML in a few invalid cases (such as a second colon in a plain value); those values are then refused or dropped by the importer. `null` and `~` read as empty values. Long flow collections and quoted scalars are read in one pass, so time grows with file size.
+The reader handles what the gallery uses: block mappings and sequences, flow sequences and mappings (also across lines), plain, single- and double-quoted scalars, literal (`|`) and folded (`>`) block scalars with chomping indicators, comments and a leading `---`. It refuses anchors, aliases, tags, complex keys, directives, explicit block indentation, duplicate keys and tabs in indentation. Checked on 2026-11-03 by a comparison script outside the test suite, it read all 191 gallery files to the same structure as js-yaml 4.1.0 with its failsafe schema. It is more lenient than YAML in a few invalid cases (such as a second colon in a plain value); those values are then refused or dropped by the importer. `null` and `~` read as empty values. Long flow collections and quoted scalars are read in one pass, so time grows with file size. Numbers follow YAML 1.2 as js-yaml reads them (`017` is 17, `0o17` is 15). The Kaitai compiler on the JVM uses YAML 1.1 rules, where `017` is octal; such a file can mean different bytes to the two Kaitai builds, and EByte follows the JavaScript one.
 
 ## How the import is tested
 

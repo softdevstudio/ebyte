@@ -634,7 +634,7 @@ func (im *importer) element(a *node, p, id string, prior []*object, sc *scope, d
 		return f, nil
 	}
 	if stack[tp] {
-		im.refuse(p+"/type", "recursive type %s is not supported", name)
+		im.refuse(p+"/type", "recursive types are not supported")
 		return f, nil
 	}
 	stack[tp] = true
@@ -781,12 +781,31 @@ func contentBytes(n *node) ([]byte, bool) {
 		return nil, false
 	}
 	var b []byte
+	quotedNumber := regexp.MustCompile(`^-?[0-9]+$`)
+	quotedHex := regexp.MustCompile(`^0x[0-9a-fA-F]+$`)
+	notText := regexp.MustCompile(`^(true|false|True|False|TRUE|FALSE|null|Null|NULL|~|[-+]?(\.[0-9]+|[0-9][0-9_]*\.[0-9_]*)([eE][-+]?[0-9]+)?|[-+]?\.(inf|Inf|INF|nan|NaN|NAN))$`)
 	for _, it := range n.items {
 		if it.kind != 'v' {
 			return nil, false
 		}
-		if s, ok := literal(it); ok {
-			v, e := strconv.Atoi(s)
+		// As Kaitai's compiler: a quoted item that is a decimal or 0x number
+		// is one byte, other quoted items are UTF-8 text; an unquoted item
+		// YAML reads as an integer is one byte, other words are text.
+		number, ok := "", false
+		switch {
+		case it.quoted && quotedNumber.MatchString(it.text):
+			number, ok = literal(&node{kind: 'v', text: it.text})
+		case it.quoted && quotedHex.MatchString(it.text):
+			number, ok = literal(&node{kind: 'v', text: it.text})
+		case it.quoted:
+		case strings.HasPrefix(it.text, "0X"):
+		case notText.MatchString(it.text):
+			return nil, false
+		default:
+			number, ok = literal(it)
+		}
+		if ok {
+			v, e := strconv.Atoi(number)
 			if e != nil || v < -128 || v > 255 {
 				return nil, false
 			}

@@ -311,7 +311,7 @@ func (r *reader) scalarLines(first string, number, indent int) (*node, error) {
 				j++
 			}
 			if j < len(r.lines) && r.lines[j].indent > indent && !looksStructural(r.lines[j], indent) && (!quoted || q.open()) {
-				b.WriteString("\n")
+				b.WriteString(strings.Repeat("\n", j-r.pos))
 				afterBreak = true
 				r.pos = j
 				continue
