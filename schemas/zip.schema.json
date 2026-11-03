@@ -36,7 +36,7 @@
       {"name": "disk_start", "type": "u16"},
       {"name": "internal_attributes", "type": "u16"},
       {"name": "external_attributes", "type": "u32"},
-      {"name": "local_header_offset", "type": "u32"},
+      {"name": "local_header_offset", "type": "u32", "derive": {"offset_of": {"element_of": "entries"}}},
       {"name": "name", "type": "string", "encoding": "utf8", "length": {"field": "name_length"}},
       {"name": "extra", "type": "bytes", "length": {"field": "extra_length"}},
       {"name": "comment", "type": "string", "encoding": "utf8", "length": {"field": "comment_length"}}

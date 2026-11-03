@@ -8,6 +8,7 @@ import (
 	"io"
 	"math"
 	"strconv"
+	"strings"
 	"unicode/utf8"
 )
 
@@ -56,6 +57,29 @@ type decoder struct {
 		value uint64
 		start int64
 	}
+	// elementStarts holds the element offsets of containers that another
+	// container's element offsets name, keyed by container path; refs holds
+	// those element offsets as read, keyed by their container's path. Both
+	// are checked and dropped when the enclosing object completes.
+	elementStarts map[string][]int64
+	refs          map[string][]elementRef
+}
+
+// elementRef is one element_of offset as read: its element index, field
+// index within the element, decoded value, start and trace entry.
+type elementRef struct {
+	index, child int
+	value        string
+	start        int64
+	entry        int
+}
+
+// container returns the path of the array or repeat an element path is in
+// and the element's index.
+func container(path string) (string, int) {
+	k := strings.LastIndexByte(path, '/')
+	n, _ := strconv.Atoi(path[k+1:])
+	return path[:k], n
 }
 
 // Decode reads one complete binary representation. It returns no document on any
@@ -233,8 +257,20 @@ func (d *decoder) object(fields []field, path string) (values map[string]any, er
 			values[f.name] = value
 		}
 	}
+	if e = d.elements(fields, path, starts, values); e != nil {
+		return nil, e
+	}
 	for i, f := range fields {
 		if f.measure == nil {
+			continue
+		}
+		if f.measure.kind == "element" {
+			// Checked by the enclosing object, which knows the other container.
+			if d.refs == nil {
+				d.refs = map[string][]elementRef{}
+			}
+			c, k := container(path)
+			d.refs[c] = append(d.refs[c], elementRef{k, i, observed[i], starts[i], entries[i]})
 			continue
 		}
 		want, code, expected := measured(f.measure, starts, ends, values, fields), "constraint_mismatch", "stored value equals measured fields"
@@ -249,6 +285,62 @@ func (d *decoder) object(fields []field, path string) (values map[string]any, er
 		}
 	}
 	return values, nil
+}
+
+// elements checks every element_of offset of this object's containers
+// against the start of the same-index element of the container it names.
+func (d *decoder) elements(fields []field, path string, starts []int64, values map[string]any) error {
+	for i, f := range fields {
+		if len(f.links) == 0 {
+			continue
+		}
+		p := path + "/" + f.name
+		refs := d.refs[p]
+		delete(d.refs, p)
+		a, _ := values[f.name].([]any)
+		for _, l := range f.links {
+			tp := path + "/" + fields[l.target].name
+			targets := d.elementStarts[tp]
+			b, _ := values[fields[l.target].name].([]any)
+			if len(a) != len(b) {
+				return d.diagnostic("constraint_mismatch", p, &starts[i], starts[i], "one element for each element of "+fields[l.target].name, "element counts differ")
+			}
+			for _, r := range refs {
+				if r.child != l.child {
+					continue
+				}
+				m := f.children[r.child].measure
+				want := ""
+				if n := targets[r.index]; !(m.add > 0 && n > math.MaxInt64-m.add) && n+m.add >= 0 {
+					want = strconv.FormatInt(n+m.add, 10)
+				}
+				if want != r.value {
+					old := entrySize(d.trace.Entries[r.entry])
+					d.trace.Entries[r.entry].State = "failed"
+					d.traceBytes += entrySize(d.trace.Entries[r.entry]) - old
+					rp := p + "/" + strconv.Itoa(r.index) + "/" + f.children[r.child].name
+					return d.diagnostic("constraint_mismatch", rp, &r.start, r.start, "stored value equals the element's offset", "stored value differs")
+				}
+			}
+		}
+	}
+	for _, f := range fields {
+		if f.elementTarget {
+			delete(d.elementStarts, path+"/"+f.name)
+		}
+	}
+	return nil
+}
+
+// recordStart notes where an element of a named container starts.
+func (d *decoder) recordStart(f field, path string) {
+	if !f.elementTarget {
+		return
+	}
+	if d.elementStarts == nil {
+		d.elementStarts = map[string][]int64{}
+	}
+	d.elementStarts[path] = append(d.elementStarts[path], d.pos)
 }
 
 // measured calculates a measured integer from sibling spans as a decimal
@@ -386,6 +478,7 @@ func (d *decoder) value(f field, path string, observed []string) (value any, int
 		}
 		a := []any{}
 		for i := 0; i < n; i++ {
+			d.recordStart(f, path)
 			obj, e := d.object(f.children, path+"/"+strconv.Itoa(i))
 			if e != nil {
 				return nil, "", e
@@ -487,6 +580,7 @@ func (d *decoder) repeat(f field, path string, start int64) (any, string, error)
 			return nil, "", e
 		}
 		before := d.pos
+		d.recordStart(f, path)
 		obj, e := d.object(f.children, elementPath)
 		if e != nil {
 			return nil, "", e

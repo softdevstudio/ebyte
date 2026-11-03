@@ -91,16 +91,31 @@ type field struct {
 	// until is set for repeat fields: "end_of_input" or "tag_mismatch".
 	until string
 	tag   []byte
+	// links are the element_of offsets among this container's element
+	// fields, checked and patched when the enclosing object completes.
+	links []elementLink
+	// elementTarget marks an array or repeat whose element offsets another
+	// container's elements measure, so its element starts are recorded.
+	elementTarget bool
+}
+
+// elementLink ties field child of each element of a container to the
+// element with the same index of sibling container target.
+type elementLink struct {
+	child, target int
 }
 
 // measure describes a measured derived integer: the byte size of siblings
 // from..to inclusive, the offset of sibling from, or the element count of
 // repeat sibling from, plus add.
 type measure struct {
-	kind      string // "size", "offset", "count" or "checksum"
+	kind      string // "size", "offset", "count", "checksum" or "element"
 	from, to  int
 	add       int64
 	algorithm string // for checksums
+	// element names the container whose same-index element an "element"
+	// measure is the offset of; it is resolved by the enclosing object.
+	element string
 }
 
 // derived reports whether a field is calculated by the encoder and therefore
@@ -168,6 +183,12 @@ func Compile(raw []byte, limits Limits) (*Plan, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Top-level fields belong to no element, so element_of has nothing to name.
+	for i, f := range fields {
+		if f.measure != nil && f.measure.kind == "element" {
+			return nil, failure("invalid_schema", fmt.Sprintf("/fields/%d/derive/offset_of", i))
+		}
+	}
 	sum := sha256.Sum256(raw)
 	return &Plan{hex.EncodeToString(sum[:]), name, limits, fields}, nil
 }
@@ -218,7 +239,7 @@ func validEscapes(raw []byte) bool {
 func safePath(path, key string) string {
 	// Only grammar member names enter diagnostics; arbitrary unknown keys stay private.
 	switch key {
-	case "schema_version", "name", "endian", "fields", "type", "length", "count", "encoding", "expect", "when", "derive", "field", "equals", "count_of", "size_of", "offset_of", "checksum", "of", "from", "to", "add", "until", "bits", "until_offset":
+	case "schema_version", "name", "endian", "fields", "type", "length", "count", "encoding", "expect", "when", "derive", "field", "equals", "count_of", "size_of", "offset_of", "checksum", "of", "from", "to", "add", "until", "bits", "until_offset", "element_of":
 		return path + "/" + key
 	}
 	return path
@@ -611,15 +632,36 @@ func compileFields(v any, path string, depth int, endian string, limits Limits, 
 		}
 	}
 	// A checksum range may hold sizes and offsets, which are written first,
-	// but not itself or another checksum, which would make the order circular.
+	// but not itself, another checksum or an element offset, which is only
+	// written when the enclosing object completes.
 	for i, f := range out {
 		if f.measure == nil || f.measure.kind != "checksum" {
 			continue
 		}
 		for j := f.measure.from; j <= f.measure.to; j++ {
-			if out[j].measure != nil && out[j].measure.kind == "checksum" {
+			if out[j].measure != nil && (out[j].measure.kind == "checksum" || out[j].measure.kind == "element") {
 				return nil, failure("invalid_schema", fmt.Sprintf("%s/%d/derive/of", path, i))
 			}
+		}
+	}
+	// An element offset inside a container's elements names a sibling
+	// container of that container, so it is resolved here, one level up.
+	for c := range out {
+		for j, ch := range out[c].children {
+			if ch.measure == nil || ch.measure.kind != "element" {
+				continue
+			}
+			t := -1
+			for k, f := range out {
+				if f.name == ch.measure.element && k != c && (f.kind == "array" || f.kind == "repeat") {
+					t = k
+				}
+			}
+			if t < 0 {
+				return nil, failure("invalid_schema", fmt.Sprintf("%s/%d/fields/%d/derive/offset_of/element_of", path, c, j))
+			}
+			out[c].links = append(out[c].links, elementLink{child: j, target: t})
+			out[t].elementTarget = true
 		}
 	}
 	return out, nil
@@ -698,6 +740,17 @@ func resolveDerive(out []field, i int, obj map[string]any, path string) error {
 		m = measure{kind: "checksum", from: from, to: to, algorithm: algorithm}
 	case obj["offset_of"] != nil:
 		key = "offset_of"
+		if r, ok := obj[key].(map[string]any); ok {
+			if e := members(r, path+"/"+key, []string{"element_of"}, nil); e != nil {
+				return e
+			}
+			name, ok := r["element_of"].(string)
+			if !ok || !identifier.MatchString(name) {
+				return failure("invalid_schema", path+"/"+key+"/element_of")
+			}
+			m = measure{kind: "element", from: i, to: i, element: name}
+			break
+		}
 		j, e := sibling(obj[key], key)
 		if e != nil {
 			return e

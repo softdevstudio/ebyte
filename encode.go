@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"io"
+	"math"
 	"strconv"
 	"unicode/utf8"
 )
@@ -268,6 +269,17 @@ type encoder struct {
 	// group collects the bit group being written; its bytes are appended
 	// after its last member.
 	group uint64
+	// elementStarts and refs mirror the decoder's: element offsets of named
+	// containers, and element_of placeholders waiting for them.
+	elementStarts map[string][]int64
+	refs          map[string][]encodedRef
+}
+
+// encodedRef is an element_of placeholder: element index, field index within
+// the element and the placeholder's span in the output.
+type encodedRef struct {
+	index, child int
+	start, end   int64
 }
 
 type tagEnd struct {
@@ -403,6 +415,20 @@ func (e *encoder) object(fields []field, m map[string]any, path string) error {
 		}
 		ends[i] = int64(len(e.out))
 	}
+	// Element offsets are known once their element is placed; leave them to
+	// the enclosing object.
+	for i, f := range fields {
+		if f.measure != nil && f.measure.kind == "element" {
+			if e.refs == nil {
+				e.refs = map[string][]encodedRef{}
+			}
+			c, k := container(path)
+			e.refs[c] = append(e.refs[c], encodedRef{k, i, starts[i], ends[i]})
+		}
+	}
+	if err := e.elements(fields, m, path); err != nil {
+		return err
+	}
 	// Sizes, offsets and counts first, then checksums over the final bytes.
 	for _, wantChecksum := range []bool{false, true} {
 		if err := e.patch(fields, m, starts, ends, path, wantChecksum); err != nil {
@@ -416,7 +442,7 @@ func (e *encoder) object(fields []field, m map[string]any, path string) error {
 // checksum or every other measured form.
 func (e *encoder) patch(fields []field, m map[string]any, starts, ends []int64, path string, checksums bool) error {
 	for i, f := range fields {
-		if f.measure == nil || (f.measure.kind == "checksum") != checksums {
+		if f.measure == nil || f.measure.kind == "element" || (f.measure.kind == "checksum") != checksums {
 			continue
 		}
 		s := measured(f.measure, starts, ends, m, fields)
@@ -436,6 +462,66 @@ func (e *encoder) patch(fields []field, m map[string]any, starts, ends []int64, 
 		copy(e.out[starts[i]:ends[i]], scratch.out)
 	}
 	return nil
+}
+
+// elements writes every element_of offset of this object's containers: the
+// start of the same-index element of the container each one names.
+func (e *encoder) elements(fields []field, m map[string]any, path string) error {
+	for _, f := range fields {
+		if len(f.links) == 0 {
+			continue
+		}
+		p := path + "/" + f.name
+		refs := e.refs[p]
+		delete(e.refs, p)
+		a, _ := m[f.name].([]any)
+		for _, l := range f.links {
+			target := fields[l.target]
+			starts := e.elementStarts[path+"/"+target.name]
+			b, _ := m[target.name].([]any)
+			if len(a) != len(b) {
+				d := encodeFailure("constraint_mismatch", p).(*Diagnostic)
+				d.Expected, d.Observed = "one element for each element of "+target.name, "element counts differ"
+				return d
+			}
+			for _, r := range refs {
+				if r.child != l.child {
+					continue
+				}
+				child := f.children[r.child]
+				rp := p + "/" + strconv.Itoa(r.index) + "/" + child.name
+				s := ""
+				if n, add := starts[r.index], child.measure.add; !(add > 0 && n > math.MaxInt64-add) && n+add >= 0 {
+					s = strconv.FormatInt(n+add, 10)
+				}
+				if s == "" || !fits(s, child.kind) {
+					return encodePosition("value_out_of_range", rp, int(r.start), int(r.start))
+				}
+				scratch := encoder{plan: e.plan, ctx: e.ctx}
+				if err := scratch.integer(child, s, rp); err != nil {
+					return err
+				}
+				copy(e.out[r.start:r.end], scratch.out)
+			}
+		}
+	}
+	for _, f := range fields {
+		if f.elementTarget {
+			delete(e.elementStarts, path+"/"+f.name)
+		}
+	}
+	return nil
+}
+
+// recordStart notes where an element of a named container starts.
+func (e *encoder) recordStart(f field, path string) {
+	if !f.elementTarget {
+		return
+	}
+	if e.elementStarts == nil {
+		e.elementStarts = map[string][]int64{}
+	}
+	e.elementStarts[path] = append(e.elementStarts[path], int64(len(e.out)))
 }
 
 // member encodes one ordinary (non-derived) field.
@@ -513,6 +599,7 @@ func (e *encoder) member(fields []field, m map[string]any, f field, v any, prese
 			if !ok {
 				return encodeFailure("invalid_document", child)
 			}
+			e.recordStart(f, p)
 			if err := e.object(f.children, obj, child); err != nil {
 				return err
 			}
@@ -600,6 +687,7 @@ func (e *encoder) repeat(f field, v any, path string) error {
 			return encodeFailure("invalid_document", child)
 		}
 		before := len(e.out)
+		e.recordStart(f, path)
 		if err := e.object(f.children, obj, child); err != nil {
 			return err
 		}
